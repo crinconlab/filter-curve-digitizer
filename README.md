@@ -73,6 +73,21 @@ Supported input file types: PNG, JPEG, WEBP, BMP, and TIFF.
 
 **Important:** X reference values are calibration markers, **not** the start/end of the export. Clicks 5 and 6 independently delimit the portion of the image to digitize.
 
+### Visual walkthrough
+
+The example below uses an **original demonstration transmission plot**, created for this project. It does not reproduce a manufacturer's published chart.
+
+**Step 1 — Calibrate the plot and select the curve.** The screenshot shows the X-axis reference ticks (400 and 750 nm), the Y-axis references (0% and 100%), the left and right plot boundaries, and the sampled red curve. The blue marks indicate the calibration clicks.
+
+![Filter Curve Digitizer: seven calibration clicks on an original demonstration plot](docs/images/calibration-example.jpg)
+
+**Step 2 — Extract and inspect the result.** The continuous **green line** follows the original **red transmission curve**. Compare the rising and falling edges, passband plateaus, and baseline before exporting.
+
+![Filter Curve Digitizer: green extracted transmission curve overlaid on the red demonstration curve](docs/images/extraction-overlay.jpg)
+
+These screenshots demonstrate the Windows v1.3b interface. The illustrated filter is **synthetic** and its shape is for software testing and instruction, not a commercial filter specification.
+
+
 ## Understanding calibration
 
 The horizontal axis is assumed to be **linear in wavelength**. Two known tick positions let the application convert every horizontal pixel position to wavelength:
