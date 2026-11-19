@@ -1,6 +1,6 @@
 # Filter Curve Digitizer
 
-**Version 1.3b · Windows application and Python source**
+**Version 1.3b · Windows x64 and macOS Intel applications · Python source**
 
 Filter Curve Digitizer converts a **color-coded spectral transmission curve in an image** into wavelength/transmission samples. It exports a CSV definition for **PixInsight FilterManager** and a JSON definition intended for **Siril's SPCC filter database**.
 
@@ -8,8 +8,22 @@ Developed by **Carlos Rincón**. Inspired by the filter digitization workflow sh
 
 > **Status:** The Windows executable and CSV/JSON file generation have been tested with an Astronomik CLS transmission chart. The Siril JSON has **not yet been verified by importing it into Siril**. This is a digitization utility, not a spectrophotometer; extracted values are approximations of the source graphic.
 
+## Security notice
+
+> [!IMPORTANT]
+> **Unsigned applications (Windows and macOS)**
+>
+> Filter Curve Digitizer is currently distributed without developer code signing or Apple notarization. On first launch, the operating system may warn that the developer cannot be verified or that the publisher is unknown. This warning does not by itself indicate malware, but the software's origin has not been authenticated through the operating system's signing process.
+>
+> **Only continue if you trust the source and downloaded the application from this project's GitHub repository.**
+>
+> **macOS:** First try opening `Filter Curve Digitizer.app`. If blocked, open **System Settings → Privacy & Security** and look for **Open Anyway** near the blocked app notice. Confirm the prompt. The wording and availability depend on your macOS version. Do not disable Gatekeeper globally.
+>
+> **Windows:** SmartScreen may report an unknown publisher. Verify the download before deciding whether to proceed; do not disable SmartScreen globally.
+
 ## Contents
 
+- [Security notice](#security-notice)
 - [Download and installation](#download-and-installation)
 - [Quick start: the seven clicks](#quick-start-the-seven-clicks)
 - [Understanding calibration](#understanding-calibration)
@@ -38,6 +52,18 @@ The one-file executable bundles the Python runtime and required modules: Python 
 
 **Note:** GitHub Actions artifacts are temporary (configured retention: 14 days). A future release may offer versioned downloads through GitHub Releases.
 
+### macOS Intel (x86_64)
+
+The Intel `Filter Curve Digitizer.app` build has been opened successfully on an Intel Mac. A public macOS download is not available yet.
+
+1. Open **Actions → Build macOS Intel APP (PyInstaller)** and choose a successful run.
+2. Download artifact `Filter-Curve-Digitizer-macOS-Intel-v1.3b`.
+3. Unzip the downloaded GitHub Actions artifact: it contains **another ZIP** with the packaged application.
+4. Extract the inner ZIP to obtain `Filter Curve Digitizer.app`. If double-click extraction fails, select **Open With → Archive Utility**.
+5. Open the `.app`. If macOS blocks the first launch, see the **Security notice** above.
+
+This build targets **Intel (x86_64)**, not Apple Silicon (arm64). The app is not signed or notarized.
+
 ### Run from Python source (Windows or macOS)
 
 Requirements: Python with a working **Tkinter** installation, **NumPy**, and **Pillow**.
@@ -47,7 +73,7 @@ python3 -m pip install -r requirements.txt
 python3 Filter_Curve_Digitizer.py
 ```
 
-On Windows, use `py` or `python` in place of `python3` if appropriate. On macOS, some system Python builds include an old or unsuitable Tkinter; use a Python installation with working Tk support. The macOS Python script is **not** a packaged, standalone `.app`.
+On Windows, use `py` or `python` in place of `python3` if appropriate. On macOS, some system Python builds include an old or unsuitable Tkinter; use a Python installation with working Tk support. A separate standalone Intel macOS `.app` is available as a private GitHub Actions artifact.
 
 Supported input file types: PNG, JPEG, WEBP, BMP, and TIFF.
 
@@ -232,7 +258,7 @@ The private repository contains `.github/workflows/windows-exe.yml`. It uses **G
 
 To create a new build, open **Actions → Build Windows EXE (Nuitka) → Run workflow** and select the correct branch. New pushes to the script, icon, requirements, or workflow can also trigger builds. The resulting ZIP is under **Artifacts** on a successful run. Artifacts are temporary; source commits remain available.
 
-The build is **not** a public GitHub Release, and no macOS `.app` is currently distributed.
+The Windows build is **not** a public GitHub Release. An Intel macOS `.app` build is available privately through GitHub Actions.
 
 ## Credits, license and changelog
 
