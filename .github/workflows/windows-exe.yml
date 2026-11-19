@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'Filter_Curve_Digitizer.py'
+      - 'Filter_Curve_Digitizer.ico'
       - 'requirements.txt'
       - '.github/workflows/windows-exe.yml'
 
@@ -28,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install nuitka ordered-set zstandard
-      - name: Check source syntax and imports
+      - name: Check syntax and imports
         shell: pwsh
         run: |
           python -m py_compile Filter_Curve_Digitizer.py
@@ -36,7 +37,7 @@ jobs:
       - name: Compile GUI executable
         shell: pwsh
         run: |
-          python -m nuitka --mode=onefile --assume-yes-for-downloads --enable-plugin=tk-inter --windows-console-mode=disable --output-filename=Filter_Curve_Digitizer.exe Filter_Curve_Digitizer.py
+          python -m nuitka --mode=onefile --assume-yes-for-downloads --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=Filter_Curve_Digitizer.ico --output-filename=Filter_Curve_Digitizer.exe Filter_Curve_Digitizer.py
       - name: Upload Windows executable (private artifact)
         uses: actions/upload-artifact@v4
         with:
