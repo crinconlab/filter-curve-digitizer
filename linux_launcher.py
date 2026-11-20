@@ -13,7 +13,7 @@ import traceback
 def self_test() -> int:
     """Exercise the same Pillow ImageTk -> Tk Canvas rendering path as the app."""
     import tkinter as tk
-    from PIL import Image, ImageTk, features
+    from PIL import Image
     import PIL
     import Filter_Curve_Digitizer as application
 
@@ -38,8 +38,7 @@ def self_test() -> int:
         if not items or app.canvas.type(items[0]) != "image":
             raise RuntimeError(f"Tk Canvas contains no image item: {items!r}")
         # Check the actual pixels in Tcl's image, not merely the Pillow original.
-        tkimage = app.photo._PhotoImage
-        pixel = tkimage.get(10, 10)
+        pixel = root.tk.call(str(app.photo), 'get', 10, 10)
         print(f"Rendered Tk pixel (10,10): {pixel!r}", flush=True)
         if isinstance(pixel, (tuple, list)):
             good = tuple(pixel[:3]) == (255, 0, 0)
