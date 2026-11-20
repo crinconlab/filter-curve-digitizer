@@ -1,0 +1,77 @@
+name: Build Linux x86_64 APP (PyInstaller)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux-x86_64:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11 (x64)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: x64
+
+      - name: Install GUI build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb xauth libx11-6 libxext6 libxrender1 libxft2 libfontconfig1 libfreetype6 libsm6 libice6
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+          python -m py_compile Filter_Curve_Digitizer.py
+          python -c "import platform; assert platform.machine() == 'x86_64'"
+          python -c "import tkinter, numpy, PIL; print('Tkinter, NumPy, Pillow: OK')"
+
+      - name: Build standalone directory
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir \
+            --name Filter_Curve_Digitizer \
+            Filter_Curve_Digitizer.py
+          test -x dist/Filter_Curve_Digitizer/Filter_Curve_Digitizer
+          file dist/Filter_Curve_Digitizer/Filter_Curve_Digitizer
+          ldd dist/Filter_Curve_Digitizer/Filter_Curve_Digitizer
+
+      - name: Smoke test graphical launch under virtual X display
+        run: |
+          xvfb-run -a python - <<'PY'
+          import os
+          import subprocess
+          import time
+          app = os.path.abspath('dist/Filter_Curve_Digitizer/Filter_Curve_Digitizer')
+          proc = subprocess.Popen([app], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          try:
+              time.sleep(6)
+              if proc.poll() is not None:
+                  out, err = proc.communicate(timeout=5)
+                  raise RuntimeError(f'GUI exited at startup with code {proc.returncode}\\nstdout: {out.decode(errors="replace")}\\nstderr: {err.decode(errors="replace")}')
+              print('PASS: graphical app stayed running for six seconds')
+          finally:
+              proc.terminate()
+              try:
+                  proc.communicate(timeout=5)
+              except subprocess.TimeoutExpired:
+                  proc.kill()
+                  proc.communicate()
+          PY
+
+      - name: Bundle Linux x86_64 artifact with executable permissions
+        run: |
+          cd dist
+          tar -czf Filter-Curve-Digitizer-Linux-x86_64-v1.3b.tar.gz Filter_Curve_Digitizer
+          tar -tzf Filter-Curve-Digitizer-Linux-x86_64-v1.3b.tar.gz | head -n 10
+          test -s Filter-Curve-Digitizer-Linux-x86_64-v1.3b.tar.gz
+
+      - name: Upload private artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Filter-Curve-Digitizer-Linux-x86_64-v1.3b
+          path: dist/Filter-Curve-Digitizer-Linux-x86_64-v1.3b.tar.gz
+          if-no-files-found: error
+          retention-days: 14
