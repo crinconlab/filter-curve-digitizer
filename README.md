@@ -1,6 +1,6 @@
 # Filter Curve Digitizer
 
-**Version 1.3b · Windows x64 and macOS Intel applications · Python source**
+**Version 1.3b · Windows x64, macOS and Linux x86_64 builds · Python source**
 
 Filter Curve Digitizer converts a **color-coded spectral transmission curve in an image** into wavelength/transmission samples. It exports a CSV definition for **PixInsight FilterManager** and a JSON definition intended for **Siril's SPCC filter database**.
 
@@ -64,7 +64,34 @@ The Intel `Filter Curve Digitizer.app` build has been opened successfully on an 
 
 This build targets **Intel (x86_64)**, not Apple Silicon (arm64). The app is not signed or notarized.
 
-### Run from Python source (Windows or macOS)
+### Linux x86_64 (Ubuntu and compatible distributions)
+
+The Linux build is distributed as a **complete application directory** inside a `.tar.gz` archive (currently available as a GitHub Actions artifact, pending final validation and public release).
+
+> [!WARNING]
+> **Do not move or run the executable by itself.** The `Filter_Curve_Digitizer` executable **must stay in the same directory as `_internal/`**. That folder contains the bundled Python runtime, Pillow/Tk support and other required libraries. If they are separated, the application will fail with a missing `libpython3.11.so.1.0` error.
+
+1. Download the latest successful **Build Linux x86_64 APP (PyInstaller)** artifact from GitHub Actions.
+2. Unzip the Actions download (outer ZIP), then **extract the complete inner `.tar.gz`**. You should get this structure:
+
+```text
+Filter_Curve_Digitizer/
+├── Filter_Curve_Digitizer    # executable
+└── _internal/               # keep this entire folder!
+```
+
+3. Keep both items together and move the **whole `Filter_Curve_Digitizer` folder** wherever you want, such as your home directory.
+4. Open a terminal in the parent directory and run:
+
+```bash
+./Filter_Curve_Digitizer/Filter_Curve_Digitizer
+```
+
+For a diagnostic check, run `./Filter_Curve_Digitizer/Filter_Curve_Digitizer --self-test` instead. It should briefly show a red test image, report the result in the terminal, and exit.
+
+**Compatibility:** Linux x86_64 build on Ubuntu 22.04. The application has launched and displayed a user image on Ubuntu 26.04 in Parallels; curve extraction and file exports on Linux still need to be checked. Other distributions are not yet verified. Python does not need to be installed separately when running the packaged application.
+
+### Run from Python source (Windows, macOS or Linux)
 
 Requirements: Python with a working **Tkinter** installation, **NumPy**, and **Pillow**.
 
