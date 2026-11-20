@@ -1,12 +1,14 @@
 # Filter Curve Digitizer v1.3b
 
-**Windows x64 · macOS · Linux x86_64 BETA**
+**Windows x64 · macOS Intel · macOS Apple Silicon · Linux x86_64 BETA**
 
 Filter Curve Digitizer turns a colored spectral transmission curve in an image into sampled wavelength/transmission data, with exports for PixInsight FilterManager and Siril SPCC.
 
 ## What's included
 
 - Standalone Windows 64-bit executable, built with Nuitka.
+- Standalone macOS applications for Intel (x86_64) and Apple Silicon (arm64), built with PyInstaller.
+- Standalone Linux x86_64 **BETA**, built with PyInstaller as a complete application directory.
 - English-language graphical interface and application icon.
 - Seven-click calibration: two known X-axis wavelength references, two Y-axis transmission references, two visible plot boundaries, and one curve-color sample.
 - Wavelength scale interpolation and extrapolation across the *visible* graph, independent of the reference tick positions.
@@ -17,9 +19,16 @@ Filter Curve Digitizer turns a colored spectral transmission curve in an image i
 
 ## Download and run
 
-Download the Windows x64 ZIP attached to this release, extract it, and run `Filter_Curve_Digitizer.exe`. Python is not required for the compiled Windows application.
+**This Release remains a draft.** These downloads are planned; do not circulate links until the release is published and the corresponding assets have been uploaded.
 
-**Windows security notice:** The executable is not digitally signed. Windows SmartScreen may flag an unknown publisher; verify that you obtained the program from this repository before running it.
+| Platform | Package / launch | Verification |
+| --- | --- | --- |
+| Windows x64 | Extract Windows ZIP and run `Filter_Curve_Digitizer.exe` | Image processing and exports tested |
+| macOS Intel (x86_64) | Extract macOS Intel ZIP and open `Filter Curve Digitizer.app` | App opened on Intel Mac |
+| macOS Apple Silicon (arm64) | Extract Apple Silicon ZIP and open `Filter Curve Digitizer.app` | Compiled; no physical Apple Silicon user test reported |
+| Linux x86_64 **BETA** | Extract entire `.tar.gz`, preserving the executable and `_internal/` directory | Limited test on Ubuntu 26.04.1 LTS under Parallels |
+
+The compiled packages do not require a separate Python installation. macOS and Windows builds are unsigned. The system may display a first-launch warning: only run files obtained from a trusted source; do not disable OS security protections globally.
 
 ## Linux x86_64 — BETA (limited testing)
 
@@ -47,7 +56,7 @@ Launch it from the parent directory with `./Filter_Curve_Digitizer/Filter_Curve_
 - **Siril import has not yet been validated in the application.** JSON export does not automatically install a filter definition.
 - Results are estimates digitized from a graphic, not measured or certified spectral transmission data.
 - Image resolution, color overlap, background grid lines, manual calibration, and cropped plot areas can affect accuracy.
-- Separate macOS Intel and Apple Silicon builds are prepared. The Intel app has been launched on an Intel Mac; Apple Silicon has not been user-tested.
+- Separate macOS Intel and Apple Silicon builds have been prepared. The Intel app has been launched on an Intel Mac; Apple Silicon has not been user-tested.
 
 ## Credits and license
 
