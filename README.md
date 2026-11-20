@@ -64,7 +64,7 @@ The Intel `Filter Curve Digitizer.app` build has been opened successfully on an 
 
 This build targets **Intel (x86_64)**, not Apple Silicon (arm64). The app is not signed or notarized.
 
-### Linux x86_64 (Ubuntu and compatible distributions)
+### Linux x86_64 — BETA (limited testing)
 
 The Linux build is distributed as a **complete application directory** inside a `.tar.gz` archive (currently available as a GitHub Actions artifact, pending final validation and public release).
 
@@ -89,7 +89,18 @@ Filter_Curve_Digitizer/
 
 For a diagnostic check, run `./Filter_Curve_Digitizer/Filter_Curve_Digitizer --self-test` instead. It should briefly show a red test image, report the result in the terminal, and exit.
 
-**Compatibility:** Linux x86_64 build on Ubuntu 22.04. The application has launched and displayed a user image on Ubuntu 26.04 in Parallels; curve extraction and file exports on Linux still need to be checked. Other distributions are not yet verified. Python does not need to be installed separately when running the packaged application.
+**Status: BETA (Linux x86_64).** This is an early platform build with limited testing. It is not yet verified on a native Linux installation or other distributions.
+
+**Tests completed on 20 November 2026:** Ubuntu 26.04.1 LTS x86_64 running as a Parallels virtual machine on an Intel Mac:
+- Packaged application launches, and its Pillow/Tk image-rendering self-test displays a red image.
+- Opens and displays a local image; seven-point calibration and curve extraction run successfully.
+- Visual inspection shows the green extracted overlay following the source curve.
+- Produces a readable PixInsight FilterManager CSV and a structurally valid Siril JSON with numeric wavelength/transmission arrays. These two supplied exports have slightly different wavelength ranges/sample counts, so they have **not** been verified as identical datasets.
+- Reads an image from a macOS shared folder using its full path.
+
+**Not tested:** native Linux hardware; other Linux distributions and desktop environments; installation/launch outside the tested Ubuntu/Parallels environment; actual CSV import into PixInsight; actual JSON import into Siril; broad compatibility or regression testing. In Parallels, the Tk file dialog may not navigate shared macOS folders conveniently, although entering a full path works. This VM-specific behavior is not established as a defect on native Linux.
+
+**Build environment:** Ubuntu 22.04 x86_64. Python does not need to be installed separately for the packaged application.
 
 ### Run from Python source (Windows, macOS or Linux)
 
