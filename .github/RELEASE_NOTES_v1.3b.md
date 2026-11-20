@@ -1,6 +1,6 @@
 # Filter Curve Digitizer v1.3b
 
-**Windows x64 · macOS · Linux x86_64 testing**
+**Windows x64 · macOS · Linux x86_64 BETA**
 
 Filter Curve Digitizer turns a colored spectral transmission curve in an image into sampled wavelength/transmission data, with exports for PixInsight FilterManager and Siril SPCC.
 
@@ -21,13 +21,24 @@ Download the Windows x64 ZIP attached to this release, extract it, and run `Filt
 
 **Windows security notice:** The executable is not digitally signed. Windows SmartScreen may flag an unknown publisher; verify that you obtained the program from this repository before running it.
 
-## Linux x86_64 — installation warning (validation in progress)
+## Linux x86_64 — BETA (limited testing)
 
 The Linux package contains a `Filter_Curve_Digitizer/` directory with **both** the `Filter_Curve_Digitizer` executable and an `_internal/` dependency directory. **Extract the entire archive and keep these together. Do not copy the executable to the desktop by itself.** Otherwise the program cannot locate bundled libraries such as `libpython3.11.so.1.0`.
 
 Launch it from the parent directory with `./Filter_Curve_Digitizer/Filter_Curve_Digitizer`. If needed, use `./Filter_Curve_Digitizer/Filter_Curve_Digitizer --self-test` for an ImageTk rendering test.
 
-A Linux x86_64 build has launched and displayed an image on Ubuntu 26.04 under Parallels. Linux curve extraction and exports have **not yet been fully verified**; do not describe Linux as fully tested until those checks succeed. Other Linux distributions have not been verified.
+**Status: BETA (Linux x86_64).** This is an early platform build with limited testing. It is not yet verified on a native Linux installation or other distributions.
+
+**Tests completed on 20 November 2026:** Ubuntu 26.04.1 LTS x86_64 running as a Parallels virtual machine on an Intel Mac:
+- Packaged application launches, and its Pillow/Tk image-rendering self-test displays a red image.
+- Opens and displays a local image; seven-point calibration and curve extraction run successfully.
+- Visual inspection shows the green extracted overlay following the source curve.
+- Produces a readable PixInsight FilterManager CSV and a structurally valid Siril JSON with numeric wavelength/transmission arrays. These two supplied exports have slightly different wavelength ranges/sample counts, so they have **not** been verified as identical datasets.
+- Reads an image from a macOS shared folder using its full path.
+
+**Not tested:** native Linux hardware; other Linux distributions and desktop environments; installation/launch outside the tested Ubuntu/Parallels environment; actual CSV import into PixInsight; actual JSON import into Siril; broad compatibility or regression testing. In Parallels, the Tk file dialog may not navigate shared macOS folders conveniently, although entering a full path works. This VM-specific behavior is not established as a defect on native Linux.
+
+
 
 ## Verification and limitations
 
