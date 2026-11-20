@@ -2,7 +2,7 @@
 
 **Version 1.3b · Windows x64, macOS and Linux x86_64 builds · Python source**
 
-Filter Curve Digitizer converts a **color-coded spectral transmission curve in manufacturers astrophographic filters graphics curves** into wavelength/transmission samples. It exports a CSV definition for **PixInsight FilterManager** and a JSON definition intended for **Siril's SPCC filter database**.
+Filter Curve Digitizer **extracts wavelength and transmission data from color-coded spectral transmission curves published by astrophotography filter manufacturers**.It exports a CSV definition for **PixInsight FilterManager** and a JSON definition intended for **Siril's SPCC filter database**.
 
 Developed by **Carlos Rincón**. Inspired by the filter digitization workflow shared by Sweetman Astrophotography.
 
