@@ -71,14 +71,14 @@ jobs:
       - name: Bundle Linux x86_64 artifact with executable permissions
         run: |
           cd dist
-          tar -czf Filter-Curve-Digitizer-Linux-x86_64-v1.3b-test2.tar.gz Filter_Curve_Digitizer
-          tar -tzf Filter-Curve-Digitizer-Linux-x86_64-v1.3b-test2.tar.gz | head -n 10
-          test -s Filter-Curve-Digitizer-Linux-x86_64-v1.3b-test2.tar.gz
+          tar -czf Filter-Curve-Digitizer-Linux-x86_64-v1.3b-beta.tar.gz Filter_Curve_Digitizer
+          tar -tzf Filter-Curve-Digitizer-Linux-x86_64-v1.3b-beta.tar.gz | head -n 10
+          test -s Filter-Curve-Digitizer-Linux-x86_64-v1.3b-beta.tar.gz
 
       - name: Upload private artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Filter-Curve-Digitizer-Linux-x86_64-v1.3b-test2
-          path: dist/Filter-Curve-Digitizer-Linux-x86_64-v1.3b-test2.tar.gz
+          name: Filter-Curve-Digitizer-Linux-x86_64-v1.3b-beta
+          path: dist/Filter-Curve-Digitizer-Linux-x86_64-v1.3b-beta.tar.gz
           if-no-files-found: error
           retention-days: 14
