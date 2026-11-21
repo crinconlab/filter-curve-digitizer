@@ -2,7 +2,7 @@
 
 **Windows x64 · macOS Intel · macOS Apple Silicon · Linux x86_64 BETA**
 
-Filter Curve Digitizer turns a colored spectral transmission curve in an image into sampled wavelength/transmission data, with exports for PixInsight FilterManager and Siril SPCC.
+Digitize colour-coded filter transmission curves from manufacturers' charts, then export wavelength and transmission data for PixInsight FilterManager or Siril SPCC.
 
 ## What's included
 
