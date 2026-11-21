@@ -1,13 +1,51 @@
 #!/usr/bin/env python3
-"""Filter Curve Digitizer v1.3 test - independent X calibration and export range.
-Requires Python with tkinter, numpy, Pillow. No network access.
+"""Filter Curve Digitizer: independent axis calibration, filter curve extraction and exports.
+Requires Python with tkinter, numpy and Pillow. Optional update checks use GitHub.
 """
 from __future__ import annotations
 import json
 import math
+import queue
+import re
+import threading
+import time
+import urllib.request
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
+
+APP_VERSION = "1.4.0"
+RELEASES_URL = "https://github.com/crinconlab/filter-curve-digitizer/releases"
+LATEST_RELEASE_API = "https://api.github.com/repos/crinconlab/filter-curve-digitizer/releases/latest"
+SETTINGS_PATH = Path.home() / ".filter-curve-digitizer" / "settings.json"
+
+
+def parse_version(value):
+    """Accept v1.4, v1.4.0 and v1.3b; reject unrelated release tags."""
+    match = re.fullmatch(r"v?(\d+)\.(\d+)(?:\.(\d+))?([a-z]?)", str(value).strip(), re.IGNORECASE)
+    if not match:
+        return None
+    major, minor, patch, suffix = match.groups()
+    # A bare numbered release sorts after a letter-suffixed preliminary build.
+    return (int(major), int(minor), int(patch or 0), 1 if not suffix else 0, suffix.lower())
+
+
+def load_settings():
+    try:
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(settings):
+    try:
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SETTINGS_PATH.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+    except OSError:
+        pass  # Failure to save preferences must not prevent using the app.
+
 import numpy as np
 from PIL import Image, ImageTk, ImageDraw
 
@@ -23,7 +61,7 @@ class Digitizer:
     ]
     def __init__(self, root):
         self.root=root
-        root.title('Filter Curve Digitizer v1.3b — PixInsight / Siril')
+        root.title(f'Filter Curve Digitizer v{APP_VERSION} — PixInsight / Siril')
         root.geometry('1210x920')
         try:
             icon_path = Path(__file__).resolve().parent / 'Filter_Curve_Digitizer.ico'
@@ -34,6 +72,12 @@ class Digitizer:
         self.image=None; self.photo=None; self.scale=1.0
         self.points={}; self.step_idx=0; self.output=None; self.overlay=None
         self.image_path=None
+        self.settings = load_settings()
+        self.update_queue = queue.Queue()
+        self.update_running = False
+        self._build_help_menu()
+        root.after(200, self._show_first_run_guide)
+        root.after(1000, self._check_updates_on_start)
         row=ttk.Frame(root,padding=9); row.pack(fill='x')
         for s,fn in [('Open image…',self.open_image),('Reset calibration',self.reset),('Extract curve',self.extract),('CSV PixInsight…',self.export_csv),('JSON Siril…',self.export_siril),('Save overlay…',self.save_overlay)]:
             ttk.Button(row,text=s,command=fn).pack(side='left',padx=(0,7))
@@ -64,6 +108,118 @@ class Digitizer:
         self.canvas.bind('<Configure>',lambda ev:self.update_canvas())
         self.status=tk.StringVar(value='No image loaded.')
         ttk.Label(root,textvariable=self.status,padding=(9,0,9,8),wraplength=1160).pack(anchor='w')
+    def _build_help_menu(self):
+        menu = tk.Menu(self.root)
+        help_menu = tk.Menu(menu, tearoff=0)
+        help_menu.add_command(label="Calibration guide…", command=self.show_calibration_guide)
+        help_menu.add_command(label="Check for updates…", command=lambda: self.check_for_updates(manual=True))
+        help_menu.add_separator()
+        self.auto_update_var = tk.BooleanVar(value=self.settings.get("auto_check_updates", True))
+        help_menu.add_checkbutton(
+            label="Automatically check for updates",
+            variable=self.auto_update_var,
+            command=self._save_update_preference,
+        )
+        menu.add_cascade(label="Help", menu=help_menu)
+        self.root.configure(menu=menu)
+
+    def _save_update_preference(self):
+        self.settings["auto_check_updates"] = bool(self.auto_update_var.get())
+        save_settings(self.settings)
+
+    def _show_first_run_guide(self):
+        if not self.settings.get("hide_calibration_guide", False):
+            self.show_calibration_guide()
+
+    def show_calibration_guide(self):
+        guide = tk.Toplevel(self.root)
+        guide.title("Calibration guide — seven clicks")
+        guide.transient(self.root)
+        guide.resizable(False, False)
+        guide.geometry("660x530")
+        guide.grab_set()
+        frame = ttk.Frame(guide, padding=20)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="How to calibrate a transmission curve", font=("Helvetica", 16, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(frame, text="Open a chart and make seven clicks in this order. The first four clicks MUST match the reference values entered in the fields above the image.", wraplength=605).pack(anchor="w", pady=(0, 12))
+        sections = [
+            ("1–2  Calibrate wavelength (X axis)", "Click 1 on the tick matching X reference 1 (nm), then click 2 on the tick matching X reference 2 (nm). Example: if the fields say 400 and 700, click the 400 nm and 700 nm ticks, respectively."),
+            ("3–4  Calibrate transmission (Y axis)", "Click 3 on the tick matching Y reference 1 (%), then click 4 on the tick matching Y reference 2 (%). Example: if the fields say 0 and 100, click the 0% and 100% ticks, respectively."),
+            ("5–6  Set extraction boundaries", "Click the LEFT and RIGHT edges of the plotted region to extract. These edges do NOT have to coincide with the wavelength reference ticks from clicks 1 and 2."),
+            ("7  Select the curve", "Click a clearly coloured part of the transmission curve, avoiding grid lines and other curves."),
+        ]
+        for heading, description in sections:
+            ttk.Label(frame, text=heading, font=("Helvetica", 11, "bold")).pack(anchor="w", pady=(6, 2))
+            ttk.Label(frame, text=description, wraplength=605, justify="left").pack(anchor="w")
+        ttk.Label(frame, text="After clicking: select Extract curve and verify that the green overlay follows the intended curve.", wraplength=605).pack(anchor="w", pady=(12, 8))
+        hide_var = tk.BooleanVar(value=bool(self.settings.get("hide_calibration_guide", False)))
+        ttk.Checkbutton(frame, text="Do not show this guide at startup", variable=hide_var).pack(anchor="w")
+        def close_guide():
+            self.settings["hide_calibration_guide"] = bool(hide_var.get())
+            save_settings(self.settings)
+            guide.destroy()
+        ttk.Button(frame, text="Start", command=close_guide).pack(anchor="e", pady=(8, 0))
+        guide.protocol("WM_DELETE_WINDOW", close_guide)
+
+    def _check_updates_on_start(self):
+        if not self.settings.get("auto_check_updates", True):
+            return
+        last = self.settings.get("last_update_check", 0)
+        if isinstance(last, (int, float)) and time.time() - last < 24 * 3600:
+            return
+        self.check_for_updates(manual=False)
+
+    def check_for_updates(self, manual=False):
+        if self.update_running:
+            if manual:
+                messagebox.showinfo("Updates", "An update check is already running.")
+            return
+        self.update_running = True
+        self.settings["last_update_check"] = time.time()
+        save_settings(self.settings)
+        def worker():
+            try:
+                request = urllib.request.Request(
+                    LATEST_RELEASE_API,
+                    headers={"User-Agent": "Filter-Curve-Digitizer/" + APP_VERSION, "Accept": "application/vnd.github+json"},
+                )
+                with urllib.request.urlopen(request, timeout=6) as response:
+                    release = json.loads(response.read(128 * 1024).decode("utf-8"))
+                if not isinstance(release, dict) or not isinstance(release.get("tag_name"), str):
+                    raise ValueError("Unexpected GitHub response.")
+                self.update_queue.put(("success", release.get("tag_name")))
+            except Exception as exc:
+                self.update_queue.put(("error", str(exc)))
+        threading.Thread(target=worker, daemon=True).start()
+        self.root.after(100, lambda: self._finish_update_check(manual))
+
+    def _finish_update_check(self, manual):
+        try:
+            status, data = self.update_queue.get_nowait()
+        except queue.Empty:
+            self.root.after(100, lambda: self._finish_update_check(manual))
+            return
+        self.update_running = False
+        if status == "error":
+            if manual:
+                messagebox.showwarning("Updates", f"Unable to check GitHub releases:\\n{data}")
+            return
+        latest, current = parse_version(data), parse_version(APP_VERSION)
+        if latest is None or current is None:
+            if manual:
+                messagebox.showwarning("Updates", "The latest GitHub release has an unrecognised version tag.")
+            return
+        if latest > current:
+            if messagebox.askyesno(
+                "New version available",
+                f"Filter Curve Digitizer {data} is available.\\n"
+                f"Installed version: {APP_VERSION}\\n\\n"
+                "Open the GitHub Releases page to download it?"
+            ):
+                webbrowser.open(RELEASES_URL)
+        elif manual:
+            messagebox.showinfo("Updates", f"You are using v{APP_VERSION}. No newer stable release is available.")
+
     @staticmethod
     def field(parent,name,var,width):
         ttk.Label(parent,text=name).pack(side='left',padx=(0,3))
