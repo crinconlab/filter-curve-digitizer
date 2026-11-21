@@ -104,6 +104,24 @@ For a diagnostic check, run `./Filter_Curve_Digitizer/Filter_Curve_Digitizer --s
 
 **Build environment:** Ubuntu 22.04 x86_64. Python does not need to be installed separately for the packaged application.
 
+### Experimental Linux AppImage (x86_64)
+
+An additional **experimental AppImage build** is configured in GitHub Actions: **Build Linux x86_64 AppImage (experimental)**. This does **not** replace the tested Linux `.tar.gz` or modify the published pre-release.
+
+1. Open the workflow in **Actions** and choose **Run workflow** on `main`.
+2. After a successful run, download artifact `Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta`.
+3. Unzip the GitHub Actions artifact. It contains the `.AppImage` file and a `.sha256` checksum.
+4. On Linux x86_64, from the directory containing the downloaded file, run:
+
+```bash
+chmod +x Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta.AppImage
+./Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta.AppImage
+```
+
+The AppImage contains the PyInstaller application directory, including its `_internal` dependencies. Its runtime may still require system libraries such as glibc and FUSE 2 compatibility. On systems lacking FUSE, try `APPIMAGE_EXTRACT_AND_RUN=1 ./Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta.AppImage`, which extracts to a temporary location before launching. This format is **not a fully statically linked executable**, and broad Linux distribution support is not yet established.
+
+The workflow checks that the embedded application passes a Pillow/ImageTk self-test on Ubuntu 22.04 under Xvfb. **A successful CI test is not a substitute for testing on a real Linux desktop.** Do not add this AppImage to the public Release or landing page before a working build has been downloaded and tested.
+
 ### Run from Python source (Windows, macOS or Linux)
 
 Requirements: Python with a working **Tkinter** installation, **NumPy**, and **Pillow**.
