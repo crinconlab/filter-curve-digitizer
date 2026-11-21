@@ -9,7 +9,7 @@ class VersionTests(unittest.TestCase):
 
     def test_older_versions(self):
         self.assertLess(parse_version("v1.3b"), parse_version("v1.4.0"))
-        self.assertLess(parse_version("v1.3"), parse_version("v1.3b"))
+        self.assertLess(parse_version("v1.3b"), parse_version("v1.3"))
         self.assertLess(parse_version("v1.4a"), parse_version("v1.4"))
 
     def test_invalid_versions(self):
