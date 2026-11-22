@@ -4,6 +4,7 @@ import json
 import queue
 import ssl
 import unittest
+import urllib.error
 from unittest.mock import Mock, patch
 from Filter_Curve_Digitizer import (
     APP_VERSION, RELEASES_URL, LATEST_RELEASE_API, Digitizer, parse_version, github_ssl_context
@@ -119,6 +120,15 @@ class UpdateSimulationTests(unittest.TestCase):
             error=OSError("offline"), manual=False
         )
         self.assertFalse(asks or infos or warnings or browsers)
+
+    def test_no_stable_release_is_informational_not_an_error(self):
+        missing = urllib.error.HTTPError(
+            LATEST_RELEASE_API, 404, "Not Found", {}, None
+        )
+        asks, infos, warnings, browsers, _ = self.run_simulation(error=missing)
+        self.assertFalse(asks or warnings or browsers)
+        self.assertEqual(len(infos), 1)
+        self.assertIn("No stable release", str(infos[0]))
 
     def test_manual_network_failure_displays_warning(self):
         asks, infos, warnings, browsers, _ = self.run_simulation(
