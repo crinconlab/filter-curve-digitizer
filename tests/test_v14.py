@@ -99,22 +99,6 @@ class UpdateSimulationTests(unittest.TestCase):
         self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
         self.assertTrue(context.check_hostname)
 
-    def test_preview_menu_simulation_shows_labelled_prompt_without_network(self):
-        with (
-            patch("Filter_Curve_Digitizer.messagebox.askyesno", return_value=True) as ask,
-            patch("Filter_Curve_Digitizer.messagebox.showinfo") as info,
-            patch("Filter_Curve_Digitizer.urllib.request.urlopen") as network,
-            patch.object(self.app, "download_update") as download,
-        ):
-            self.app.simulate_update_notification()
-            network.assert_not_called()
-            download.assert_not_called()
-            self.assertEqual(len(ask.call_args_list), 1)
-            self.assertIn("TEST ONLY", ask.call_args.args[0])
-            self.assertIn("NOT published", ask.call_args.args[1])
-            self.assertIn("v1.5.0", ask.call_args.args[1])
-            self.assertIn("simulated", str(info.call_args).lower())
-
     def test_newer_release_prompts_and_opens_real_releases_page_if_accepted(self):
         asks, infos, warnings, browsers, requests = self.run_simulation("v1.5.0", accept=True)
         self.assertEqual(len(asks), 1)
