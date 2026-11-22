@@ -71,6 +71,7 @@ jobs:
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onedir --target-arch x86_64 --name "Filter Curve Digitizer" --icon Filter_Curve_Digitizer.icns --osx-bundle-identifier com.crinconlab.filtercurvedigitizer Filter_Curve_Digitizer.py
           test -s "dist/Filter Curve Digitizer.app/Contents/Resources/Filter_Curve_Digitizer.icns"
+          "dist/Filter Curve Digitizer.app/Contents/MacOS/Filter Curve Digitizer" --check-ssl
           cd dist
           ditto -c -k --keepParent "Filter Curve Digitizer.app" "Filter-Curve-Digitizer-v1.4-preview-macOS-Intel.zip"
           unzip -t "Filter-Curve-Digitizer-v1.4-preview-macOS-Intel.zip" >/dev/null
@@ -116,6 +117,7 @@ jobs:
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onedir --target-arch arm64 --name "Filter Curve Digitizer" --icon Filter_Curve_Digitizer.icns --osx-bundle-identifier com.crinconlab.filtercurvedigitizer Filter_Curve_Digitizer.py
           test -s "dist/Filter Curve Digitizer.app/Contents/Resources/Filter_Curve_Digitizer.icns"
+          "dist/Filter Curve Digitizer.app/Contents/MacOS/Filter Curve Digitizer" --check-ssl
           cd dist
           ditto -c -k --keepParent "Filter Curve Digitizer.app" "Filter-Curve-Digitizer-v1.4-preview-macOS-Apple-Silicon.zip"
           unzip -t "Filter-Curve-Digitizer-v1.4-preview-macOS-Apple-Silicon.zip" >/dev/null
