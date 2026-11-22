@@ -309,29 +309,29 @@ class Digitizer:
             if simulated:
                 if messagebox.askyesno(
                     "TEST ONLY — simulated update",
-                    f"Simulation: version {tag} is NOT published.\\n"
-                    f"Installed version: {APP_VERSION}.\\n\\n"
-                    "Download the update to your Downloads folder?\\n"
+                    f"Simulation: version {tag} is NOT published.\n"
+                    f"Installed version: {APP_VERSION}.\n\n"
+                    "Download the update to your Downloads folder?\n"
                     "(No actual download will occur.)"
                 ):
                     messagebox.showinfo(
                         "TEST ONLY — download simulation",
-                        "The download was simulated successfully.\\n"
+                        "The download was simulated successfully.\n"
                         "No file was downloaded or installed."
                     )
             elif asset is None:
                 if messagebox.askyesno(
                     "New version available",
-                    f"Filter Curve Digitizer {tag} is available.\\n"
-                    "No compatible download was found for this computer.\\n\\n"
+                    f"Filter Curve Digitizer {tag} is available.\n"
+                    "No compatible download was found for this computer.\n\n"
                     "Open GitHub Releases to choose a file manually?"
                 ):
                     webbrowser.open(RELEASES_URL)
             elif messagebox.askyesno(
                 "New version available",
-                f"Filter Curve Digitizer {tag} is available.\\n"
-                f"Installed version: {APP_VERSION}.\\n\\n"
-                f"Download {asset['name']} to your Downloads folder?\\n"
+                f"Filter Curve Digitizer {tag} is available.\n"
+                f"Installed version: {APP_VERSION}.\n\n"
+                f"Download {asset['name']} to your Downloads folder?\n"
                 "The app will not install or run the downloaded file."
             ):
                 self.download_update(asset)
@@ -399,8 +399,8 @@ class Digitizer:
                 path = Path(finished[1])
                 if messagebox.askyesno(
                     "Download complete",
-                    f"Saved to:\\n{path}\\n\\n"
-                    "Open the Downloads folder?\\n"
+                    f"Saved to:\n{path}\n\n"
+                    "Open the Downloads folder?\n"
                     "You will need to install the update manually."
                 ):
                     self.open_download_folder(path.parent)
