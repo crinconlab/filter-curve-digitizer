@@ -7,7 +7,7 @@ Filter Curve Digitizer converts colour-coded spectral transmission curves from m
 - **Seven-click calibration guide.** An introductory guide explains the four stages of calibration. The first four clicks must correspond exactly to the values in the X/Y reference fields.
 - **Clearer calibration prompts.** The current click and its corresponding wavelength or transmission value are shown prominently above the chart. Separate reminders explain the extraction boundaries and the green verification overlay.
 - **Update notifications.** The app can check for stable releases on GitHub, including via **Help → Check for updates…**. Automatic checks can be disabled. Checks run in the background and are limited to approximately once a day.
-- **Direct update downloads.** When a newer compatible release is available, the app can download the matching package into the user's Downloads folder without requiring navigation through GitHub. Transfers use HTTPS with certificate verification and require a matching SHA-256 digest when available from GitHub release asset metadata. Installation remains manual.
+- **Direct update downloads.** When a newer compatible release is available, the app can download the matching package into the user's Downloads folder without requiring navigation through GitHub. Transfers use HTTPS with certificate verification and require a matching SHA-256 digest from GitHub release asset metadata. Installation remains manual.
 - **Consistent app icon** across all operating systems.
 - **Native Apple Silicon** build alongside the macOS Intel build.
 - **Linux AppImage** replaces the Linux directory-based package as the user-facing format.
