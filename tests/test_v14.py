@@ -46,6 +46,9 @@ class ImmediateThread:
 
 
 class MockResponse(io.BytesIO):
+    def __init__(self, data=b""):
+        super().__init__(data)
+        self.headers = {"Content-Length": str(len(data))}
     def __enter__(self):
         return self
 
