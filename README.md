@@ -67,7 +67,7 @@ A corresponding `.AppImage.sha256` checksum is also distributed. Some Linux dist
 
 From **Help → Check for updates…**, the app checks GitHub for newer **stable** Releases; prereleases are excluded. By default it also checks periodically after opening (at most once every 24 hours). Disable the automatic option in the Help menu if preferred.
 
-When a newer stable version has a matching release asset for your system, the app can download it directly to your Downloads folder. It checks the HTTPS certificate and the expected SHA-256 digest. The downloaded file is **never automatically installed or executed**. If no compatible asset is available, a link to Releases is offered instead. This capability has not yet undergone a full published-release-to-published-release end-to-end test.
+When a newer stable version has a matching release asset for your system, the app can download it directly to your Downloads folder. It checks the HTTPS certificate and requires a matching SHA-256 digest from GitHub's release asset metadata. The downloaded file is **never automatically installed or executed**. If no compatible asset is available, a link to Releases is offered instead. This capability has not yet undergone a full published-release-to-published-release end-to-end test.
 
 ### Run from Python source (Windows, macOS or Linux)
 
