@@ -99,8 +99,27 @@ class Digitizer:
         ttk.Combobox(row,textvariable=self.mono_channel,values=('LUM','RED','GREEN','BLUE'),width=7,state='readonly').pack(side='left',padx=(4,9))
         ttk.Label(row,text='Color tolerance:').pack(side='left')
         ttk.Scale(row,from_=20,to=160,variable=self.tol,orient='horizontal',length=155).pack(side='left',padx=6)
-        self.info=tk.StringVar(value='Open a plot image. Calibrate using two known axis ticks, then select the visible plot boundaries.')
-        ttk.Label(root,textvariable=self.info,padding=(9,2,9,7),wraplength=1160).pack(anchor='w')
+        # Keep the current click highly visible, immediately above the image.
+        prompt_frame = tk.Frame(root, bg="#e7f1ff", padx=12, pady=9)
+        prompt_frame.pack(fill="x", padx=9, pady=(5, 3))
+        self.step_badge = tk.Label(prompt_frame, text="READY", font=("Helvetica", 12, "bold"),
+                                   bg="#174c85", fg="white", padx=10, pady=5)
+        self.step_badge.pack(side="left", padx=(0, 12))
+        self.info = tk.StringVar()
+        self.prompt_label = tk.Label(prompt_frame, textvariable=self.info, bg="#e7f1ff",
+                                     fg="#123658", font=("Helvetica", 12, "bold"),
+                                     anchor="w", justify="left", wraplength=950)
+        self.prompt_label.pack(side="left", fill="x", expand=True)
+        self.reference_warning = tk.Label(
+            root,
+            text="IMPORTANT: Clicks 1–4 MUST match the values entered in X Reference 1/2 and Y Reference 1/2.",
+            bg="#fff0c4", fg="#593a00", font=("Helvetica", 11, "bold"),
+            anchor="w", padx=12, pady=7,
+        )
+        self.reference_warning.pack(fill="x", padx=9, pady=(0, 5))
+        for var in (self.xmin, self.xmax, self.ymin, self.ymax):
+            var.trace_add("write", lambda *_: self._update_step_prompt())
+        self._update_step_prompt()
         frame=ttk.Frame(root);frame.pack(fill='both',expand=True,padx=9,pady=(0,7))
         self.canvas=tk.Canvas(frame,bg='#e7e7e7',highlightthickness=1,highlightbackground='#999')
         self.canvas.pack(fill='both',expand=True)
@@ -108,6 +127,32 @@ class Digitizer:
         self.canvas.bind('<Configure>',lambda ev:self.update_canvas())
         self.status=tk.StringVar(value='No image loaded.')
         ttk.Label(root,textvariable=self.status,padding=(9,0,9,8),wraplength=1160).pack(anchor='w')
+    def _update_step_prompt(self):
+        if self.image is None:
+            self.step_badge.configure(text="READY")
+            self.info.set("Open a transmission chart to begin the seven calibration clicks.")
+            self.reference_warning.pack(fill="x", padx=9, pady=(0, 5))
+            return
+        prompts = [
+            f"Click the X-axis tick at {self.xmin.get()} nm (X Reference 1).",
+            f"Click the X-axis tick at {self.xmax.get()} nm (X Reference 2).",
+            f"Click the Y-axis tick at {self.ymin.get()}% (Y Reference 1).",
+            f"Click the Y-axis tick at {self.ymax.get()}% (Y Reference 2).",
+            "Click the LEFT edge of the plotted extraction region (not X Reference 1).",
+            "Click the RIGHT edge of the plotted extraction region (not X Reference 2).",
+            "Click a clearly coloured part of the transmission curve.",
+        ]
+        if self.step_idx < len(prompts):
+            self.step_badge.configure(text=f"{self.step_idx + 1} / 7")
+            self.info.set(prompts[self.step_idx])
+        else:
+            self.step_badge.configure(text="7 / 7 ✓")
+            self.info.set("Calibration complete. Click Extract curve and check the green overlay.")
+        if self.step_idx < 4:
+            self.reference_warning.pack(fill="x", padx=9, pady=(0, 5))
+        else:
+            self.reference_warning.pack_forget()
+
     def _build_help_menu(self):
         menu = tk.Menu(self.root)
         help_menu = tk.Menu(menu, tearoff=0)
@@ -235,7 +280,7 @@ class Digitizer:
         self.reset()
     def reset(self):
         self.points={};self.step_idx=0;self.output=None;self.overlay=None
-        self.info.set(self.STEPS[0][1] if self.image else 'Open an image.')
+        self._update_step_prompt()
         self.status.set('IMPORTANT: X reference values identify axis tick marks, not export limits. Set the visible plot boundaries in clicks 5 and 6.')
         self.update_canvas()
     def update_canvas(self):
@@ -267,7 +312,7 @@ class Digitizer:
             self.sample_color=patch[k]
             self.status.set(f'Selected curve color: RGB {tuple(int(v) for v in self.sample_color)}. Click Extract curve.')
         self.points[key]=(x,y);self.step_idx+=1
-        self.info.set(self.STEPS[self.step_idx][1] if self.step_idx<len(self.STEPS) else 'Calibration complete. Extract the curve and CHECK the green overlay.')
+        self._update_step_prompt()
         self.update_canvas()
     @staticmethod
     def coordinates(x_ref0,x_ref1,px0,px1,left,right,step):
