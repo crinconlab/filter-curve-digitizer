@@ -5,6 +5,8 @@ Requires Python with tkinter, numpy and Pillow. Optional update checks use GitHu
 from __future__ import annotations
 import json
 import math
+import os
+import subprocess
 import queue
 import re
 import ssl
@@ -67,6 +69,7 @@ def save_settings(settings):
         pass  # Failure to save preferences must not prevent using the app.
 
 import certifi
+from update_download import (platform_asset_key, select_release_asset, download_release_asset, downloads_directory)
 import numpy as np
 from PIL import Image, ImageTk, ImageDraw
 
@@ -96,6 +99,7 @@ class Digitizer:
         self.settings = load_settings()
         self.update_queue = queue.Queue()
         self.update_running = False
+        self.download_running = False
         self._build_help_menu()
         root.after(200, self._show_first_run_guide)
         root.after(1000, self._check_updates_on_start)
@@ -259,7 +263,7 @@ class Digitizer:
                     release = json.loads(response.read(128 * 1024).decode("utf-8"))
                 if not isinstance(release, dict) or not isinstance(release.get("tag_name"), str):
                     raise ValueError("Unexpected GitHub response.")
-                self.update_queue.put(("success", release.get("tag_name")))
+                self.update_queue.put(("success", release))
             except urllib.error.HTTPError as exc:
                 if exc.code == 404:
                     self.update_queue.put(("no_stable_release", None))
@@ -275,7 +279,7 @@ class Digitizer:
         if self.update_running:
             messagebox.showinfo("Simulated update", "An update check is in progress. Please retry.")
             return
-        self.update_queue.put(("success", "v1.5.0"))
+        self.update_queue.put(("success", {"tag_name": "v1.5.0", "assets": []}))
         self._finish_update_check(manual=True, simulated=True)
 
     def _finish_update_check(self, manual, simulated=False):
@@ -293,22 +297,119 @@ class Digitizer:
             if manual:
                 messagebox.showwarning("Updates", f"Unable to check GitHub releases:\n{data}")
             return
-        latest, current = parse_version(data), parse_version(APP_VERSION)
+        tag = data.get("tag_name", "") if isinstance(data, dict) else ""
+        latest, current = parse_version(tag), parse_version(APP_VERSION)
         if latest is None or current is None:
             if manual:
                 messagebox.showwarning("Updates", "The latest GitHub release has an unrecognised version tag.")
             return
         if latest > current:
-            if messagebox.askyesno(
-                "TEST ONLY — simulated update" if simulated else "New version available",
-                (f"This is a simulation; version {data} is NOT published.\n\n" if simulated else "")
-                + f"Filter Curve Digitizer {data} is available.\n"
-                + f"Installed version: {APP_VERSION}\n\n"
-                + "Open the GitHub Releases page?"
+            key = platform_asset_key()
+            asset = select_release_asset(data, key) if not simulated else None
+            if simulated:
+                messagebox.showinfo(
+                    "TEST ONLY — simulated update",
+                    f"Simulation: version {tag} is NOT published.\\n"
+                    f"Installed version: {APP_VERSION}.\\n\\n"
+                    "In a real update, Download would save the correct file to Downloads.\\n"
+                    "No download has been started."
+                )
+            elif asset is None:
+                if messagebox.askyesno(
+                    "New version available",
+                    f"Filter Curve Digitizer {tag} is available.\\n"
+                    "No compatible download was found for this computer.\\n\\n"
+                    "Open GitHub Releases to choose a file manually?"
+                ):
+                    webbrowser.open(RELEASES_URL)
+            elif messagebox.askyesno(
+                "New version available",
+                f"Filter Curve Digitizer {tag} is available.\\n"
+                f"Installed version: {APP_VERSION}.\\n\\n"
+                f"Download {asset['name']} to your Downloads folder?\\n"
+                "The app will not install or run the downloaded file."
             ):
-                webbrowser.open(RELEASES_URL)
+                self.download_update(asset)
         elif manual:
             messagebox.showinfo("Updates", f"You are using v{APP_VERSION}. No newer stable release is available.")
+
+    def download_update(self, asset):
+        """Download in a worker; Tk widgets are only updated from the main thread."""
+        if self.download_running:
+            messagebox.showinfo("Update download", "A download is already running.")
+            return
+        self.download_running = True
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Downloading Filter Curve Digitizer")
+        dialog.transient(self.root)
+        dialog.resizable(False, False)
+        dialog.geometry("490x150")
+        box = ttk.Frame(dialog, padding=16)
+        box.pack(fill="both", expand=True)
+        label = tk.StringVar(value="Connecting to GitHub…")
+        ttk.Label(box, textvariable=label, wraplength=455).pack(anchor="w", pady=(0, 12))
+        bar = ttk.Progressbar(box, mode="indeterminate", length=455)
+        bar.pack(fill="x")
+        bar.start(12)
+        # Prevent closing a running transfer; keep UI interactive and avoid Tk access from workers.
+        dialog.protocol("WM_DELETE_WINDOW", lambda: None)
+        events = queue.Queue()
+        def progress(done, total):
+            events.put(("progress", done, total))
+        def worker():
+            try:
+                path = download_release_asset(asset, downloads_directory(), progress=progress)
+                events.put(("done", str(path)))
+            except Exception as exc:
+                events.put(("error", str(exc)))
+        threading.Thread(target=worker, daemon=True).start()
+        def poll():
+            finished = None
+            try:
+                while True:
+                    event = events.get_nowait()
+                    if event[0] == "progress":
+                        _, done, total = event
+                        if total > 0:
+                            if str(bar.cget("mode")) != "determinate":
+                                bar.stop()
+                                bar.configure(mode="determinate", maximum=100)
+                            bar["value"] = min(100, round(100 * done / total))
+                            label.set(f"Downloaded {done / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MB")
+                        else:
+                            label.set(f"Downloaded {done / (1024 * 1024):.1f} MB")
+                    else:
+                        finished = event
+            except queue.Empty:
+                pass
+            if finished is None:
+                self.root.after(120, poll)
+                return
+            self.download_running = False
+            bar.stop()
+            dialog.destroy()
+            if finished[0] == "error":
+                messagebox.showerror("Update download", "Download failed: " + finished[1])
+            else:
+                path = Path(finished[1])
+                if messagebox.askyesno(
+                    "Download complete",
+                    f"Saved to:\\n{path}\\n\\n"
+                    "Open the Downloads folder?\\n"
+                    "You will need to install the update manually."
+                ):
+                    self.open_download_folder(path.parent)
+        self.root.after(120, poll)
+
+    @staticmethod
+    def open_download_folder(folder):
+        """Reveal the folder without launching the downloaded executable."""
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", str(folder)])
+        elif sys.platform.startswith("win"):
+            os.startfile(str(folder))
+        else:
+            subprocess.Popen(["xdg-open", str(folder)])
 
     @staticmethod
     def field(parent,name,var,width):
