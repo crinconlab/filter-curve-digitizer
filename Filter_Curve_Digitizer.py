@@ -32,15 +32,14 @@ def github_ssl_context():
 
 
 def test_github_https():
-    """Packaging diagnostic: confirm certificate verification in the actual executable."""
-    request = urllib.request.Request(
-        "https://api.github.com/",
-        headers={"User-Agent": "Filter-Curve-Digitizer/" + APP_VERSION},
-    )
-    with urllib.request.urlopen(request, timeout=12, context=github_ssl_context()) as response:
-        if response.status != 200:
-            raise RuntimeError(f"GitHub HTTPS test returned HTTP {response.status}")
-    print("PASS: GitHub HTTPS certificate verified using packaged CA certificates.")
+    """Packaging diagnostic: verify GitHub TLS certificate without using its rate-limited API."""
+    import socket
+    host = "api.github.com"
+    with socket.create_connection((host, 443), timeout=12) as connection:
+        with github_ssl_context().wrap_socket(connection, server_hostname=host) as tls:
+            if not tls.getpeercert():
+                raise RuntimeError("GitHub TLS certificate missing.")
+    print("PASS: GitHub TLS certificate verified using packaged CA certificates (no API request).")
 
 
 def parse_version(value):
