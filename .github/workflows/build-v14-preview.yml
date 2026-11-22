@@ -8,6 +8,7 @@ on:
       - Filter_Curve_Digitizer.py
       - linux_launcher.py
       - requirements.txt
+      - tests/test_v14.py
       - .github/workflows/build-v14-preview.yml
   workflow_dispatch:
 
