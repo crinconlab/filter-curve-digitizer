@@ -2,10 +2,11 @@
 import io
 import json
 import queue
+import ssl
 import unittest
 from unittest.mock import Mock, patch
 from Filter_Curve_Digitizer import (
-    APP_VERSION, RELEASES_URL, LATEST_RELEASE_API, Digitizer, parse_version
+    APP_VERSION, RELEASES_URL, LATEST_RELEASE_API, Digitizer, parse_version, github_ssl_context
 )
 
 
@@ -77,6 +78,18 @@ class UpdateSimulationTests(unittest.TestCase):
             self.app.check_for_updates(manual=manual)
             self.assertFalse(self.app.update_running)
             return ask.call_args_list, info.call_args_list, warning.call_args_list, browser.call_args_list, response.call_args_list
+
+    def test_ssl_context_preserves_certificate_verification(self):
+        context = github_ssl_context()
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+
+    def test_update_request_explicitly_uses_verified_context(self):
+        _, _, _, _, requests = self.run_simulation("v1.4.0")
+        self.assertIn("context", requests[0].kwargs)
+        context = requests[0].kwargs["context"]
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
 
     def test_newer_release_prompts_and_opens_real_releases_page_if_accepted(self):
         asks, infos, warnings, browsers, requests = self.run_simulation("v1.5.0", accept=True)
