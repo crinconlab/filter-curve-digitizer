@@ -149,9 +149,12 @@ class Digitizer:
             self.step_badge.configure(text="7 / 7 ✓")
             self.info.set("Calibration complete. Click Extract curve and check the green overlay.")
         if self.step_idx < 4:
-            self.reference_warning.pack(fill="x", padx=9, pady=(0, 5))
+            warning = "IMPORTANT: Clicks 1–4 MUST match the values entered in X Reference 1/2 and Y Reference 1/2."
+        elif self.step_idx < 6:
+            warning = "Clicks 5–6 select the extraction boundaries; they do NOT need to match the X reference ticks."
         else:
-            self.reference_warning.pack_forget()
+            warning = "Check the green extracted overlay against the original transmission curve before exporting."
+        self.reference_warning.configure(text=warning)
 
     def _build_help_menu(self):
         menu = tk.Menu(self.root)
