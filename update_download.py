@@ -79,7 +79,7 @@ def safe_asset_filename(asset):
 def expected_digest(asset):
     digest = asset.get("digest")
     if not digest:
-        return None
+        raise ValueError("GitHub did not provide a SHA-256 digest for this release asset. Download cancelled.")
     if isinstance(digest, str) and re.fullmatch(r"sha256:[a-fA-F0-9]{64}", digest):
         return digest.split(":", 1)[1].lower()
     raise ValueError("Unsupported release checksum metadata.")
