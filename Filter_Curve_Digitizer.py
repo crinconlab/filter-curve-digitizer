@@ -250,7 +250,7 @@ class Digitizer:
         self.update_running = False
         if status == "error":
             if manual:
-                messagebox.showwarning("Updates", f"Unable to check GitHub releases:\\n{data}")
+                messagebox.showwarning("Updates", f"Unable to check GitHub releases:\n{data}")
             return
         latest, current = parse_version(data), parse_version(APP_VERSION)
         if latest is None or current is None:
@@ -260,8 +260,8 @@ class Digitizer:
         if latest > current:
             if messagebox.askyesno(
                 "New version available",
-                f"Filter Curve Digitizer {data} is available.\\n"
-                f"Installed version: {APP_VERSION}\\n\\n"
+                f"Filter Curve Digitizer {data} is available.\n"
+                f"Installed version: {APP_VERSION}\n\n"
                 "Open the GitHub Releases page to download it?"
             ):
                 webbrowser.open(RELEASES_URL)
