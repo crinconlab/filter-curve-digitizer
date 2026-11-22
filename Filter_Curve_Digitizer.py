@@ -185,9 +185,6 @@ class Digitizer:
         help_menu = tk.Menu(menu, tearoff=0)
         help_menu.add_command(label="Calibration guide…", command=self.show_calibration_guide)
         help_menu.add_command(label="Check for updates…", command=lambda: self.check_for_updates(manual=True))
-        # PREVIEW-ONLY diagnostic. Remove before the official v1.4 release.
-        help_menu.add_command(label="TEST ONLY — Simulate v1.5 update…",
-                              command=self.simulate_update_notification)
         help_menu.add_separator()
         self.auto_update_var = tk.BooleanVar(value=self.settings.get("auto_check_updates", True))
         help_menu.add_checkbutton(
@@ -273,15 +270,7 @@ class Digitizer:
         threading.Thread(target=worker, daemon=True).start()
         self.root.after(100, lambda: self._finish_update_check(manual))
 
-    def simulate_update_notification(self):
-        """Preview-only UI check; does not contact GitHub or change preferences."""
-        if self.update_running:
-            messagebox.showinfo("Simulated update", "An update check is in progress. Please retry.")
-            return
-        self.update_queue.put(("success", {"tag_name": "v1.5.0", "assets": []}))
-        self._finish_update_check(manual=True, simulated=True)
-
-    def _finish_update_check(self, manual, simulated=False):
+    def _finish_update_check(self, manual):
         try:
             status, data = self.update_queue.get_nowait()
         except queue.Empty:
@@ -304,21 +293,8 @@ class Digitizer:
             return
         if latest > current:
             key = platform_asset_key()
-            asset = select_release_asset(data, key) if not simulated else None
-            if simulated:
-                if messagebox.askyesno(
-                    "TEST ONLY — simulated update",
-                    f"Simulation: version {tag} is NOT published.\n"
-                    f"Installed version: {APP_VERSION}.\n\n"
-                    "Download the update to your Downloads folder?\n"
-                    "(No actual download will occur.)"
-                ):
-                    messagebox.showinfo(
-                        "TEST ONLY — download simulation",
-                        "The download was simulated successfully.\n"
-                        "No file was downloaded or installed."
-                    )
-            elif asset is None:
+            asset = select_release_asset(data, key)
+            if asset is None:
                 if messagebox.askyesno(
                     "New version available",
                     f"Filter Curve Digitizer {tag} is available.\n"
