@@ -7,6 +7,8 @@ import json
 import math
 import queue
 import re
+import ssl
+import sys
 import threading
 import time
 import urllib.request
@@ -19,6 +21,23 @@ APP_VERSION = "1.4.0"
 RELEASES_URL = "https://github.com/crinconlab/filter-curve-digitizer/releases"
 LATEST_RELEASE_API = "https://api.github.com/repos/crinconlab/filter-curve-digitizer/releases/latest"
 SETTINGS_PATH = Path.home() / ".filter-curve-digitizer" / "settings.json"
+
+
+def github_ssl_context():
+    """Verify HTTPS against a bundled, maintained CA certificate store."""
+    return ssl.create_default_context(cafile=certifi.where())
+
+
+def test_github_https():
+    """Packaging diagnostic: confirm certificate verification in the actual executable."""
+    request = urllib.request.Request(
+        "https://api.github.com/",
+        headers={"User-Agent": "Filter-Curve-Digitizer/" + APP_VERSION},
+    )
+    with urllib.request.urlopen(request, timeout=12, context=github_ssl_context()) as response:
+        if response.status != 200:
+            raise RuntimeError(f"GitHub HTTPS test returned HTTP {response.status}")
+    print("PASS: GitHub HTTPS certificate verified using packaged CA certificates.")
 
 
 def parse_version(value):
@@ -46,6 +65,7 @@ def save_settings(settings):
     except OSError:
         pass  # Failure to save preferences must not prevent using the app.
 
+import certifi
 import numpy as np
 from PIL import Image, ImageTk, ImageDraw
 
@@ -231,7 +251,7 @@ class Digitizer:
                     LATEST_RELEASE_API,
                     headers={"User-Agent": "Filter-Curve-Digitizer/" + APP_VERSION, "Accept": "application/vnd.github+json"},
                 )
-                with urllib.request.urlopen(request, timeout=6) as response:
+                with urllib.request.urlopen(request, timeout=6, context=github_ssl_context()) as response:
                     release = json.loads(response.read(128 * 1024).decode("utf-8"))
                 if not isinstance(release, dict) or not isinstance(release.get("tag_name"), str):
                     raise ValueError("Unexpected GitHub response.")
@@ -441,6 +461,9 @@ class Digitizer:
         if path:self.overlay.save(path)
 
 def main():
+    if "--check-ssl" in sys.argv[1:]:
+        test_github_https()
+        return
     root=tk.Tk()
     try:ttk.Style().theme_use('clam')
     except tk.TclError:pass
