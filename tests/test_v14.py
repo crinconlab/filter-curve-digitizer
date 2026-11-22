@@ -1,5 +1,8 @@
 """Regression tests for calibration and offline-simulated GitHub update checks."""
 import io
+import hashlib
+import tempfile
+from pathlib import Path
 import json
 import queue
 import ssl
@@ -9,6 +12,7 @@ from unittest.mock import Mock, patch
 from Filter_Curve_Digitizer import (
     APP_VERSION, RELEASES_URL, LATEST_RELEASE_API, Digitizer, parse_version, github_ssl_context
 )
+from update_download import (platform_asset_key, select_release_asset, download_release_asset)
 
 
 class VersionTests(unittest.TestCase):
@@ -94,17 +98,17 @@ class UpdateSimulationTests(unittest.TestCase):
 
     def test_preview_menu_simulation_shows_labelled_prompt_without_network(self):
         with (
-            patch("Filter_Curve_Digitizer.messagebox.askyesno", return_value=True) as ask,
-            patch("Filter_Curve_Digitizer.webbrowser.open") as browser,
+            patch("Filter_Curve_Digitizer.messagebox.showinfo") as info,
             patch("Filter_Curve_Digitizer.urllib.request.urlopen") as network,
+            patch.object(self.app, "download_update") as download,
         ):
             self.app.simulate_update_notification()
             network.assert_not_called()
-            self.assertEqual(len(ask.call_args_list), 1)
-            self.assertIn("TEST ONLY", ask.call_args.args[0])
-            self.assertIn("NOT published", ask.call_args.args[1])
-            self.assertIn("v1.5.0", ask.call_args.args[1])
-            browser.assert_called_once_with(RELEASES_URL)
+            download.assert_not_called()
+            self.assertEqual(len(info.call_args_list), 1)
+            self.assertIn("TEST ONLY", info.call_args.args[0])
+            self.assertIn("NOT published", info.call_args.args[1])
+            self.assertIn("v1.5.0", info.call_args.args[1])
 
     def test_newer_release_prompts_and_opens_real_releases_page_if_accepted(self):
         asks, infos, warnings, browsers, requests = self.run_simulation("v1.5.0", accept=True)
@@ -114,6 +118,22 @@ class UpdateSimulationTests(unittest.TestCase):
         self.assertEqual(len(browsers), 1)
         self.assertFalse(infos or warnings)
         self.assertEqual(requests[0].args[0].full_url, LATEST_RELEASE_API)
+
+    def test_real_release_asset_starts_download_instead_of_browser(self):
+        release = {"tag_name": "v1.5.0", "assets": [{
+            "name": "Filter-Curve-Digitizer-v1.5-Windows-x64.exe",
+            "browser_download_url": "https://github.com/crinconlab/filter-curve-digitizer/releases/download/v1.5/Filter-Curve-Digitizer-v1.5-Windows-x64.exe",
+        }]}
+        self.app.update_queue.put(("success", release))
+        with (
+            patch("Filter_Curve_Digitizer.platform_asset_key", return_value="windows-x64"),
+            patch("Filter_Curve_Digitizer.messagebox.askyesno", return_value=True),
+            patch("Filter_Curve_Digitizer.webbrowser.open") as browser,
+            patch.object(self.app, "download_update") as download,
+        ):
+            self.app._finish_update_check(manual=True)
+            download.assert_called_once_with(release["assets"][0])
+            browser.assert_not_called()
 
     def test_user_can_decline_update(self):
         asks, infos, warnings, browsers, _ = self.run_simulation("v1.5.0", accept=False)
@@ -169,6 +189,66 @@ class UpdateSimulationTests(unittest.TestCase):
                 self.app._check_updates_on_start()
                 check.assert_not_called()
 
+
+
+class AssetDownloadTests(unittest.TestCase):
+    def test_architecture_detection(self):
+        self.assertEqual(platform_asset_key("Windows", "AMD64"), "windows-x64")
+        self.assertEqual(platform_asset_key("Darwin", "x86_64"), "macos-intel")
+        self.assertEqual(platform_asset_key("Darwin", "arm64"), "macos-apple-silicon")
+        self.assertEqual(platform_asset_key("Linux", "x86_64"), "linux-x86_64")
+        self.assertIsNone(platform_asset_key("Linux", "aarch64"))
+
+    def test_exact_asset_selection(self):
+        filenames = [
+            "Filter-Curve-Digitizer-v1.5-Windows-x64.exe",
+            "Filter-Curve-Digitizer-v1.5-macOS-Intel.zip",
+            "Filter-Curve-Digitizer-v1.5-macOS-Apple-Silicon.zip",
+            "Filter-Curve-Digitizer-v1.5-Linux-x86_64.AppImage",
+        ]
+        release = {"assets": [{"name": f, "browser_download_url":
+                    "https://github.com/crinconlab/filter-curve-digitizer/releases/download/v1.5/" + f}
+                   for f in filenames]}
+        for platform_key, name in zip(
+            ("windows-x64", "macos-intel", "macos-apple-silicon", "linux-x86_64"),
+            filenames,
+        ):
+            with self.subTest(platform=platform_key):
+                self.assertEqual(select_release_asset(release, platform_key)["name"], name)
+
+    def test_invalid_asset_url_is_rejected_before_connecting(self):
+        asset = {"name": "Filter-Curve-Digitizer-v1.5-Windows-x64.exe",
+                 "browser_download_url": "https://evil.invalid/installer.exe"}
+        with tempfile.TemporaryDirectory() as d:
+            with patch("update_download.urllib.request.urlopen") as network:
+                with self.assertRaises(ValueError):
+                    download_release_asset(asset, d)
+                network.assert_not_called()
+
+    def test_download_and_verify_github_digest(self):
+        payload = b"example-binary-payload"
+        digest = hashlib.sha256(payload).hexdigest()
+        name = "Filter-Curve-Digitizer-v1.5-Windows-x64.exe"
+        asset = {"name": name,
+                 "browser_download_url": "https://github.com/crinconlab/filter-curve-digitizer/releases/download/v1.5/" + name,
+                 "digest": "sha256:" + digest}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("update_download.urllib.request.urlopen", return_value=MockResponse(payload)):
+                path = download_release_asset(asset, directory)
+            self.assertEqual(path.read_bytes(), payload)
+            self.assertFalse((Path(directory) / (name + ".part")).exists())
+
+    def test_checksum_mismatch_removes_partial_and_does_not_publish_file(self):
+        name = "Filter-Curve-Digitizer-v1.5-Windows-x64.exe"
+        asset = {"name": name,
+                 "browser_download_url": "https://github.com/crinconlab/filter-curve-digitizer/releases/download/v1.5/" + name,
+                 "digest": "sha256:" + "a" * 64}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("update_download.urllib.request.urlopen", return_value=MockResponse(b"wrong")):
+                with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                    download_release_asset(asset, directory)
+            self.assertFalse((Path(directory) / name).exists())
+            self.assertFalse((Path(directory) / (name + ".part")).exists())
 
 if __name__ == "__main__":
     unittest.main()
