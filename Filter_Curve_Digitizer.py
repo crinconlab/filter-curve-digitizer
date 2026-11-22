@@ -11,6 +11,7 @@ import ssl
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 import webbrowser
 import tkinter as tk
@@ -256,6 +257,11 @@ class Digitizer:
                 if not isinstance(release, dict) or not isinstance(release.get("tag_name"), str):
                     raise ValueError("Unexpected GitHub response.")
                 self.update_queue.put(("success", release.get("tag_name")))
+            except urllib.error.HTTPError as exc:
+                if exc.code == 404:
+                    self.update_queue.put(("no_stable_release", None))
+                else:
+                    self.update_queue.put(("error", str(exc)))
             except Exception as exc:
                 self.update_queue.put(("error", str(exc)))
         threading.Thread(target=worker, daemon=True).start()
@@ -268,6 +274,10 @@ class Digitizer:
             self.root.after(100, lambda: self._finish_update_check(manual))
             return
         self.update_running = False
+        if status == "no_stable_release":
+            if manual:
+                messagebox.showinfo("Updates", "No stable release is published on GitHub yet. You are using v" + APP_VERSION + ".")
+            return
         if status == "error":
             if manual:
                 messagebox.showwarning("Updates", f"Unable to check GitHub releases:\n{data}")
