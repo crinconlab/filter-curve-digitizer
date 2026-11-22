@@ -32,11 +32,11 @@ jobs:
         shell: pwsh
         run: |
           python -m py_compile Filter_Curve_Digitizer.py
-          python -m nuitka --mode=onefile --assume-yes-for-downloads --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=Filter_Curve_Digitizer.ico --output-filename=Filter-Curve-Digitizer-v1.4.exe Filter_Curve_Digitizer.py
+          python -m nuitka --mode=onefile --assume-yes-for-downloads --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=Filter_Curve_Digitizer.ico --output-filename=Filter-Curve-Digitizer-v1.4-Windows-x64.exe Filter_Curve_Digitizer.py
       - uses: actions/upload-artifact@v4
         with:
           name: Filter-Curve-Digitizer-v1.4-Windows-x64
-          path: Filter-Curve-Digitizer-v1.4.exe
+          path: Filter-Curve-Digitizer-v1.4-Windows-x64.exe
           if-no-files-found: error
           retention-days: 14
 
