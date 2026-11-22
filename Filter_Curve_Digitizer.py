@@ -307,13 +307,18 @@ class Digitizer:
             key = platform_asset_key()
             asset = select_release_asset(data, key) if not simulated else None
             if simulated:
-                messagebox.showinfo(
+                if messagebox.askyesno(
                     "TEST ONLY — simulated update",
                     f"Simulation: version {tag} is NOT published.\\n"
                     f"Installed version: {APP_VERSION}.\\n\\n"
-                    "In a real update, Download would save the correct file to Downloads.\\n"
-                    "No download has been started."
-                )
+                    "Download the update to your Downloads folder?\\n"
+                    "(No actual download will occur.)"
+                ):
+                    messagebox.showinfo(
+                        "TEST ONLY — download simulation",
+                        "The download was simulated successfully.\\n"
+                        "No file was downloaded or installed."
+                    )
             elif asset is None:
                 if messagebox.askyesno(
                     "New version available",
