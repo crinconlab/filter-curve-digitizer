@@ -1,0 +1,244 @@
+name: Build v1.4 release candidate packages
+
+on:
+  push:
+    branches:
+      - develop/v1.4-onboarding-updates
+    paths:
+      - Filter_Curve_Digitizer.py
+      - update_download.py
+      - linux_launcher.py
+      - requirements.txt
+      - tests/test_v14.py
+      - .github/workflows/build-v14-release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt nuitka ordered-set zstandard
+      - name: Compile release candidate EXE
+        shell: pwsh
+        run: |
+          python -m py_compile Filter_Curve_Digitizer.py
+          python -m nuitka --mode=onefile --assume-yes-for-downloads --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=Filter_Curve_Digitizer.ico --output-filename=Filter-Curve-Digitizer-v1.4-Windows-x64.exe Filter_Curve_Digitizer.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Filter-Curve-Digitizer-v1.4-Windows-x64
+          path: Filter-Curve-Digitizer-v1.4-Windows-x64.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  macos-intel:
+    name: macOS Intel
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt pyinstaller
+          python -m py_compile Filter_Curve_Digitizer.py
+      - name: Prepare macOS app icon from original project ICO
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          source = Image.open("Filter_Curve_Digitizer.ico")
+          source.save("app-icon.png")
+          print("Original icon size:", source.size)
+          PY
+          mkdir -p app.iconset
+          for s in 16 32 128 256 512; do
+            sips -z "$s" "$s" app-icon.png --out "app.iconset/icon_${s}x${s}.png" >/dev/null
+            d=$((s * 2))
+            sips -z "$d" "$d" app-icon.png --out "app.iconset/icon_${s}x${s}@2x.png" >/dev/null
+          done
+          iconutil -c icns app.iconset -o Filter_Curve_Digitizer.icns
+          test -s Filter_Curve_Digitizer.icns
+      - name: Build app
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --target-arch x86_64 --name "Filter Curve Digitizer" --icon Filter_Curve_Digitizer.icns --osx-bundle-identifier com.crinconlab.filtercurvedigitizer Filter_Curve_Digitizer.py
+          test -s "dist/Filter Curve Digitizer.app/Contents/Resources/Filter_Curve_Digitizer.icns"
+          "dist/Filter Curve Digitizer.app/Contents/MacOS/Filter Curve Digitizer" --check-ssl
+          cd dist
+          ditto -c -k --keepParent "Filter Curve Digitizer.app" "Filter-Curve-Digitizer-v1.4-macOS-Intel.zip"
+          unzip -t "Filter-Curve-Digitizer-v1.4-macOS-Intel.zip" >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Filter-Curve-Digitizer-v1.4-macOS-Intel
+          path: dist/Filter-Curve-Digitizer-v1.4-macOS-Intel.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  macos-apple-silicon:
+    name: macOS Apple Silicon
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: arm64
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt pyinstaller
+          python -m py_compile Filter_Curve_Digitizer.py
+          test "$(uname -m)" = "arm64"
+          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
+      - name: Prepare macOS app icon from original project ICO
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          source = Image.open("Filter_Curve_Digitizer.ico")
+          source.save("app-icon.png")
+          print("Original icon size:", source.size)
+          PY
+          mkdir -p app.iconset
+          for s in 16 32 128 256 512; do
+            sips -z "$s" "$s" app-icon.png --out "app.iconset/icon_${s}x${s}.png" >/dev/null
+            d=$((s * 2))
+            sips -z "$d" "$d" app-icon.png --out "app.iconset/icon_${s}x${s}@2x.png" >/dev/null
+          done
+          iconutil -c icns app.iconset -o Filter_Curve_Digitizer.icns
+          test -s Filter_Curve_Digitizer.icns
+      - name: Build app
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --target-arch arm64 --name "Filter Curve Digitizer" --icon Filter_Curve_Digitizer.icns --osx-bundle-identifier com.crinconlab.filtercurvedigitizer Filter_Curve_Digitizer.py
+          test -s "dist/Filter Curve Digitizer.app/Contents/Resources/Filter_Curve_Digitizer.icns"
+          "dist/Filter Curve Digitizer.app/Contents/MacOS/Filter Curve Digitizer" --check-ssl
+          cd dist
+          ditto -c -k --keepParent "Filter Curve Digitizer.app" "Filter-Curve-Digitizer-v1.4-macOS-Apple-Silicon.zip"
+          unzip -t "Filter-Curve-Digitizer-v1.4-macOS-Apple-Silicon.zip" >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Filter-Curve-Digitizer-v1.4-macOS-Apple-Silicon
+          path: dist/Filter-Curve-Digitizer-v1.4-macOS-Apple-Silicon.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    name: Linux x86_64 AppImage
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11 x64
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: x64
+
+      - name: Install packaging and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb xauth file desktop-file-utils \
+            libx11-6 libxext6 libxrender1 libxft2 libfontconfig1 libfreetype6 libsm6 libice6
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+          python -m py_compile Filter_Curve_Digitizer.py linux_launcher.py
+          test "$(uname -m)" = x86_64
+
+      - name: Build v1.4 standalone program
+        run: |
+          python -m PyInstaller --noconfirm --clean --console --onedir \
+            --hidden-import PIL._imagingtk \
+            --collect-submodules PIL \
+            --name Filter_Curve_Digitizer \
+            linux_launcher.py
+          test -x dist/Filter_Curve_Digitizer/Filter_Curve_Digitizer
+          test -f dist/Filter_Curve_Digitizer/_internal/libpython3.11.so.1.0
+          xvfb-run -a dist/Filter_Curve_Digitizer/Filter_Curve_Digitizer --self-test
+
+      - name: Create AppDir with desktop entry and icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p FilterCurveDigitizer.AppDir/usr/bin
+          cp -a dist/Filter_Curve_Digitizer FilterCurveDigitizer.AppDir/usr/bin/
+          cat > FilterCurveDigitizer.AppDir/AppRun <<'EOF'
+          #!/bin/sh
+          HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          exec "$HERE/usr/bin/Filter_Curve_Digitizer/Filter_Curve_Digitizer" "$@"
+          EOF
+          chmod +x FilterCurveDigitizer.AppDir/AppRun
+          cat > FilterCurveDigitizer.AppDir/filter-curve-digitizer.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Filter Curve Digitizer
+          Comment=Digitize transmission charts from astrophotography filter manufacturers
+          Exec=Filter_Curve_Digitizer
+          Icon=filter-curve-digitizer
+          Terminal=false
+          Categories=Education;Science;
+          EOF
+          desktop-file-validate FilterCurveDigitizer.AppDir/filter-curve-digitizer.desktop
+          python - <<'PY'
+          from PIL import Image
+          image = Image.open("Filter_Curve_Digitizer.ico").convert("RGBA")
+          image = image.resize((256, 256), Image.Resampling.LANCZOS)
+          image.save("FilterCurveDigitizer.AppDir/filter-curve-digitizer.png")
+          print("AppImage icon generated from original project ICO")
+          PY
+          test -f FilterCurveDigitizer.AppDir/filter-curve-digitizer.png
+          xvfb-run -a FilterCurveDigitizer.AppDir/AppRun --self-test
+
+      - name: Obtain official AppImage packaging tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p appimage-tools
+          curl --fail --location --retry 3 --silent --show-error \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+            -o appimage-tools/appimagetool-x86_64.AppImage
+          curl --fail --location --retry 3 --silent --show-error \
+            https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 \
+            -o appimage-tools/runtime-x86_64
+          chmod +x appimage-tools/appimagetool-x86_64.AppImage
+          file appimage-tools/appimagetool-x86_64.AppImage appimage-tools/runtime-x86_64
+
+      - name: Package AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 \
+            ./appimage-tools/appimagetool-x86_64.AppImage \
+            --runtime-file ./appimage-tools/runtime-x86_64 \
+            FilterCurveDigitizer.AppDir \
+            Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
+          test -s Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
+          chmod +x Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
+          file Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
+
+      - name: Smoke test the actual AppImage (FUSE-free mode)
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a \
+            ./Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage --self-test
+          sha256sum Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage \
+            | tee Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage.sha256
+
+      - name: Upload v1.4 Linux AppImage release candidate (not a Release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Filter-Curve-Digitizer-v1.4-Linux-x86_64
+          path: |
+            Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
+            Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage.sha256
+          if-no-files-found: error
+          retention-days: 14

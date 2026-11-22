@@ -1,6 +1,6 @@
 # Filter Curve Digitizer
 
-**Version 1.3b · Windows x64, macOS and Linux x86_64 builds · Python source**
+**Version 1.4.0 · Windows x64, macOS Intel / Apple Silicon, Linux x86_64 AppImage · Python source**
 
 Digitize colour-coded filter transmission curves from manufacturers' charts, then export wavelength and transmission data for PixInsight FilterManager or Siril SPCC.
 
@@ -41,86 +41,33 @@ Developed by **Carlos Rincón**. Inspired by the filter digitization workflow sh
 
 ## Download and installation
 
-### Windows (64-bit)
+Download the appropriate asset from [GitHub Releases](https://github.com/crinconlab/filter-curve-digitizer/releases). Use the version and architecture matching your computer. See [v1.4 release notes](.github/RELEASE_NOTES_v1.4.md) for changes and limitations.
 
-The compiled executable is currently available to repository collaborators through **GitHub Actions**. A public release download is **not available yet**.
+| Platform | v1.4 download |
+| --- | --- |
+| Windows (x64) | `Filter-Curve-Digitizer-v1.4-Windows-x64.exe` |
+| macOS Intel | `Filter-Curve-Digitizer-v1.4-macOS-Intel.zip` |
+| macOS Apple Silicon / M-series | `Filter-Curve-Digitizer-v1.4-macOS-Apple-Silicon.zip` |
+| Linux x86_64 (beta) | `Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage` |
 
-1. Open **Actions → Build Windows EXE (Nuitka)** in this repository.
-2. Open a **successful** build from the current version.
-3. Under **Artifacts**, download `Filter-Curve-Digitizer-Windows-x64`.
-4. Unzip the artifact and run `Filter_Curve_Digitizer.exe`.
+**Windows:** Download the EXE and open it. The application is unsigned: review the Security notice before proceeding past any publisher warning.
 
-The one-file executable bundles the Python runtime and required modules: Python does not need to be installed separately on the Windows computer. Windows SmartScreen may display a warning for an unsigned executable. Run only software obtained from a source you trust; this application is not digitally signed.
+**macOS:** Extract the ZIP, then open `Filter Curve Digitizer.app`. Select Intel or Apple Silicon according to your processor. The application is not notarized; follow the Security notice if macOS blocks it.
 
-**Note:** GitHub Actions artifacts are temporary (configured retention: 14 days). A future release may offer versioned downloads through GitHub Releases.
-
-### macOS Intel (x86_64)
-
-The Intel `Filter Curve Digitizer.app` build has been opened successfully on an Intel Mac. A public macOS download is not available yet.
-
-1. Open **Actions → Build macOS Intel APP (PyInstaller)** and choose a successful run.
-2. Download artifact `Filter-Curve-Digitizer-macOS-Intel-v1.3b`.
-3. Unzip the downloaded GitHub Actions artifact: it contains **another ZIP** with the packaged application.
-4. Extract the inner ZIP to obtain `Filter Curve Digitizer.app`. If double-click extraction fails, select **Open With → Archive Utility**.
-5. Open the `.app`. If macOS blocks the first launch, see the **Security notice** above.
-
-This build targets **Intel (x86_64)**, not Apple Silicon (arm64). The app is not signed or notarized.
-
-### Linux x86_64 — BETA (limited testing)
-
-The Linux build is distributed as a **complete application directory** inside a `.tar.gz` archive (currently available as a GitHub Actions artifact, pending final validation and public release).
-
-> [!WARNING]
-> **Do not move or run the executable by itself.** The `Filter_Curve_Digitizer` executable **must stay in the same directory as `_internal/`**. That folder contains the bundled Python runtime, Pillow/Tk support and other required libraries. If they are separated, the application will fail with a missing `libpython3.11.so.1.0` error.
-
-1. Download the latest successful **Build Linux x86_64 APP (PyInstaller)** artifact from GitHub Actions.
-2. Unzip the Actions download (outer ZIP), then **extract the complete inner `.tar.gz`**. You should get this structure:
-
-```text
-Filter_Curve_Digitizer/
-├── Filter_Curve_Digitizer    # executable
-└── _internal/               # keep this entire folder!
-```
-
-3. Keep both items together and move the **whole `Filter_Curve_Digitizer` folder** wherever you want, such as your home directory.
-4. Open a terminal in the parent directory and run:
+**Linux (beta):** Use the single AppImage. In a terminal, from its containing folder:
 
 ```bash
-./Filter_Curve_Digitizer/Filter_Curve_Digitizer
+chmod +x Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
+./Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage
 ```
 
-For a diagnostic check, run `./Filter_Curve_Digitizer/Filter_Curve_Digitizer --self-test` instead. It should briefly show a red test image, report the result in the terminal, and exit.
+A corresponding `.AppImage.sha256` checksum is also distributed. Some Linux distributions may require additional runtime libraries; compatibility beyond tested environments is not guaranteed. No separate `.tar.gz` Linux package is planned for v1.4.
 
-**Status: BETA (Linux x86_64).** This is an early platform build with limited testing. It is not yet verified on a native Linux installation or other distributions.
+### Version checks and update downloads
 
-**Tests completed on 20 November 2026:** Ubuntu 26.04.1 LTS x86_64 running as a Parallels virtual machine on an Intel Mac:
-- Packaged application launches, and its Pillow/Tk image-rendering self-test displays a red image.
-- Opens and displays a local image; seven-point calibration and curve extraction run successfully.
-- Visual inspection shows the green extracted overlay following the source curve.
-- Produces a readable PixInsight FilterManager CSV and a structurally valid Siril JSON with numeric wavelength/transmission arrays. These two supplied exports have slightly different wavelength ranges/sample counts, so they have **not** been verified as identical datasets.
-- Reads an image from a macOS shared folder using its full path.
+From **Help → Check for updates…**, the app checks GitHub for newer **stable** Releases; prereleases are excluded. By default it also checks periodically after opening (at most once every 24 hours). Disable the automatic option in the Help menu if preferred.
 
-**Not tested:** native Linux hardware; other Linux distributions and desktop environments; installation/launch outside the tested Ubuntu/Parallels environment; actual CSV import into PixInsight; actual JSON import into Siril; broad compatibility or regression testing. In Parallels, the Tk file dialog may not navigate shared macOS folders conveniently, although entering a full path works. This VM-specific behavior is not established as a defect on native Linux.
-
-**Build environment:** Ubuntu 22.04 x86_64. Python does not need to be installed separately for the packaged application.
-
-### Experimental Linux AppImage (x86_64)
-
-An additional **experimental AppImage build** is configured in GitHub Actions: **Build Linux x86_64 AppImage (experimental)**. This does **not** replace the tested Linux `.tar.gz` or modify the published pre-release.
-
-1. Open the workflow in **Actions** and choose **Run workflow** on `main`.
-2. After a successful run, download artifact `Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta`.
-3. Unzip the GitHub Actions artifact. It contains the `.AppImage` file and a `.sha256` checksum.
-4. On Linux x86_64, from the directory containing the downloaded file, run:
-
-```bash
-chmod +x Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta.AppImage
-./Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta.AppImage
-```
-
-The AppImage contains the PyInstaller application directory, including its `_internal` dependencies. Its runtime may still require system libraries such as glibc and FUSE 2 compatibility. On systems lacking FUSE, try `APPIMAGE_EXTRACT_AND_RUN=1 ./Filter-Curve-Digitizer-Linux-x86_64-v1.3b-appimage-beta.AppImage`, which extracts to a temporary location before launching. This format is **not a fully statically linked executable**, and broad Linux distribution support is not yet established.
-
-The workflow checks that the embedded application passes a Pillow/ImageTk self-test on Ubuntu 22.04 under Xvfb. **A successful CI test is not a substitute for testing on a real Linux desktop.** Do not add this AppImage to the public Release or landing page before a working build has been downloaded and tested.
+When a newer stable version has a matching release asset for your system, the app can download it directly to your Downloads folder. It checks the HTTPS certificate and requires a matching SHA-256 digest from GitHub's release asset metadata. The downloaded file is **never automatically installed or executed**. If no compatible asset is available, a link to Releases is offered instead. This capability has not yet undergone a full published-release-to-published-release end-to-end test.
 
 ### Run from Python source (Windows, macOS or Linux)
 
@@ -328,8 +275,9 @@ The Windows build is **not** a public GitHub Release. An Intel macOS `.app` buil
 
 ### Changelog
 
+- **v1.4.0:** Guided calibration and highlighted live click prompts; optional update notifications and direct downloads; native Apple Silicon build; Linux AppImage.
 - **v1.3b:** English-language user interface; seven-step calibration with independent plot boundaries; continuous 3-pixel green verification overlay; Windows EXE icon support.
 - **v1.3 (test):** Separate wavelength reference ticks from the visible plot export range, enabling X-axis interpolation/extrapolation over visible data.
 - **v1.2:** CSV output for PixInsight FilterManager and JSON output intended for Siril SPCC.
 
-**Publication status:** This repository is currently private. Public download pages, release packages, and wider distribution are deferred until the project is ready.
+**Publication status:** The repository is public. See GitHub Releases for available downloads; preview packages in Actions are for testing only.

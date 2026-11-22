@@ -1,13 +1,74 @@
 #!/usr/bin/env python3
-"""Filter Curve Digitizer v1.3 test - independent X calibration and export range.
-Requires Python with tkinter, numpy, Pillow. No network access.
+"""Filter Curve Digitizer: independent axis calibration, filter curve extraction and exports.
+Requires Python with tkinter, numpy and Pillow. Optional update checks use GitHub.
 """
 from __future__ import annotations
 import json
 import math
+import os
+import subprocess
+import queue
+import re
+import ssl
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
+
+APP_VERSION = "1.4.0"
+RELEASES_URL = "https://github.com/crinconlab/filter-curve-digitizer/releases"
+LATEST_RELEASE_API = "https://api.github.com/repos/crinconlab/filter-curve-digitizer/releases/latest"
+SETTINGS_PATH = Path.home() / ".filter-curve-digitizer" / "settings.json"
+
+
+def github_ssl_context():
+    """Verify HTTPS against a bundled, maintained CA certificate store."""
+    return ssl.create_default_context(cafile=certifi.where())
+
+
+def test_github_https():
+    """Packaging diagnostic: verify GitHub TLS certificate without using its rate-limited API."""
+    import socket
+    host = "api.github.com"
+    with socket.create_connection((host, 443), timeout=12) as connection:
+        with github_ssl_context().wrap_socket(connection, server_hostname=host) as tls:
+            if not tls.getpeercert():
+                raise RuntimeError("GitHub TLS certificate missing.")
+    print("PASS: GitHub TLS certificate verified using packaged CA certificates (no API request).")
+
+
+def parse_version(value):
+    """Accept v1.4, v1.4.0 and v1.3b; reject unrelated release tags."""
+    match = re.fullmatch(r"v?(\d+)\.(\d+)(?:\.(\d+))?([a-z]?)", str(value).strip(), re.IGNORECASE)
+    if not match:
+        return None
+    major, minor, patch, suffix = match.groups()
+    # A bare numbered release sorts after a letter-suffixed preliminary build.
+    return (int(major), int(minor), int(patch or 0), 1 if not suffix else 0, suffix.lower())
+
+
+def load_settings():
+    try:
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(settings):
+    try:
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SETTINGS_PATH.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+    except OSError:
+        pass  # Failure to save preferences must not prevent using the app.
+
+import certifi
+from update_download import (platform_asset_key, select_release_asset, download_release_asset, downloads_directory)
 import numpy as np
 from PIL import Image, ImageTk, ImageDraw
 
@@ -23,7 +84,7 @@ class Digitizer:
     ]
     def __init__(self, root):
         self.root=root
-        root.title('Filter Curve Digitizer v1.3b — PixInsight / Siril')
+        root.title(f'Filter Curve Digitizer v{APP_VERSION} — PixInsight / Siril')
         root.geometry('1210x920')
         try:
             icon_path = Path(__file__).resolve().parent / 'Filter_Curve_Digitizer.ico'
@@ -34,6 +95,13 @@ class Digitizer:
         self.image=None; self.photo=None; self.scale=1.0
         self.points={}; self.step_idx=0; self.output=None; self.overlay=None
         self.image_path=None
+        self.settings = load_settings()
+        self.update_queue = queue.Queue()
+        self.update_running = False
+        self.download_running = False
+        self._build_help_menu()
+        root.after(200, self._show_first_run_guide)
+        root.after(1000, self._check_updates_on_start)
         row=ttk.Frame(root,padding=9); row.pack(fill='x')
         for s,fn in [('Open image…',self.open_image),('Reset calibration',self.reset),('Extract curve',self.extract),('CSV PixInsight…',self.export_csv),('JSON Siril…',self.export_siril),('Save overlay…',self.save_overlay)]:
             ttk.Button(row,text=s,command=fn).pack(side='left',padx=(0,7))
@@ -55,8 +123,27 @@ class Digitizer:
         ttk.Combobox(row,textvariable=self.mono_channel,values=('LUM','RED','GREEN','BLUE'),width=7,state='readonly').pack(side='left',padx=(4,9))
         ttk.Label(row,text='Color tolerance:').pack(side='left')
         ttk.Scale(row,from_=20,to=160,variable=self.tol,orient='horizontal',length=155).pack(side='left',padx=6)
-        self.info=tk.StringVar(value='Open a plot image. Calibrate using two known axis ticks, then select the visible plot boundaries.')
-        ttk.Label(root,textvariable=self.info,padding=(9,2,9,7),wraplength=1160).pack(anchor='w')
+        # Keep the current click highly visible, immediately above the image.
+        prompt_frame = tk.Frame(root, bg="#e7f1ff", padx=12, pady=9)
+        prompt_frame.pack(fill="x", padx=9, pady=(5, 3))
+        self.step_badge = tk.Label(prompt_frame, text="READY", font=("Helvetica", 12, "bold"),
+                                   bg="#174c85", fg="white", padx=10, pady=5)
+        self.step_badge.pack(side="left", padx=(0, 12))
+        self.info = tk.StringVar()
+        self.prompt_label = tk.Label(prompt_frame, textvariable=self.info, bg="#e7f1ff",
+                                     fg="#123658", font=("Helvetica", 12, "bold"),
+                                     anchor="w", justify="left", wraplength=950)
+        self.prompt_label.pack(side="left", fill="x", expand=True)
+        self.reference_warning = tk.Label(
+            root,
+            text="IMPORTANT: Clicks 1–4 MUST match the values entered in X Reference 1/2 and Y Reference 1/2.",
+            bg="#fff0c4", fg="#593a00", font=("Helvetica", 11, "bold"),
+            anchor="w", padx=12, pady=7,
+        )
+        self.reference_warning.pack(fill="x", padx=9, pady=(0, 5))
+        for var in (self.xmin, self.xmax, self.ymin, self.ymax):
+            var.trace_add("write", lambda *_: self._update_step_prompt())
+        self._update_step_prompt()
         frame=ttk.Frame(root);frame.pack(fill='both',expand=True,padx=9,pady=(0,7))
         self.canvas=tk.Canvas(frame,bg='#e7e7e7',highlightthickness=1,highlightbackground='#999')
         self.canvas.pack(fill='both',expand=True)
@@ -64,6 +151,246 @@ class Digitizer:
         self.canvas.bind('<Configure>',lambda ev:self.update_canvas())
         self.status=tk.StringVar(value='No image loaded.')
         ttk.Label(root,textvariable=self.status,padding=(9,0,9,8),wraplength=1160).pack(anchor='w')
+    def _update_step_prompt(self):
+        if self.image is None:
+            self.step_badge.configure(text="READY")
+            self.info.set("Open a transmission chart to begin the seven calibration clicks.")
+            self.reference_warning.pack(fill="x", padx=9, pady=(0, 5))
+            return
+        prompts = [
+            f"Click the X-axis tick at {self.xmin.get()} nm (X Reference 1).",
+            f"Click the X-axis tick at {self.xmax.get()} nm (X Reference 2).",
+            f"Click the Y-axis tick at {self.ymin.get()}% (Y Reference 1).",
+            f"Click the Y-axis tick at {self.ymax.get()}% (Y Reference 2).",
+            "Click the LEFT edge of the plotted extraction region (not X Reference 1).",
+            "Click the RIGHT edge of the plotted extraction region (not X Reference 2).",
+            "Click a clearly coloured part of the transmission curve.",
+        ]
+        if self.step_idx < len(prompts):
+            self.step_badge.configure(text=f"{self.step_idx + 1} / 7")
+            self.info.set(prompts[self.step_idx])
+        else:
+            self.step_badge.configure(text="7 / 7 ✓")
+            self.info.set("Calibration complete. Click Extract curve and check the green overlay.")
+        if self.step_idx < 4:
+            warning = "IMPORTANT: Clicks 1–4 MUST match the values entered in X Reference 1/2 and Y Reference 1/2."
+        elif self.step_idx < 6:
+            warning = "Clicks 5–6 select the extraction boundaries; they do NOT need to match the X reference ticks."
+        else:
+            warning = "Check the green extracted overlay against the original transmission curve before exporting."
+        self.reference_warning.configure(text=warning)
+
+    def _build_help_menu(self):
+        menu = tk.Menu(self.root)
+        help_menu = tk.Menu(menu, tearoff=0)
+        help_menu.add_command(label="Calibration guide…", command=self.show_calibration_guide)
+        help_menu.add_command(label="Check for updates…", command=lambda: self.check_for_updates(manual=True))
+        help_menu.add_separator()
+        self.auto_update_var = tk.BooleanVar(value=self.settings.get("auto_check_updates", True))
+        help_menu.add_checkbutton(
+            label="Automatically check for updates",
+            variable=self.auto_update_var,
+            command=self._save_update_preference,
+        )
+        menu.add_cascade(label="Help", menu=help_menu)
+        self.root.configure(menu=menu)
+
+    def _save_update_preference(self):
+        self.settings["auto_check_updates"] = bool(self.auto_update_var.get())
+        save_settings(self.settings)
+
+    def _show_first_run_guide(self):
+        if not self.settings.get("hide_calibration_guide", False):
+            self.show_calibration_guide()
+
+    def show_calibration_guide(self):
+        guide = tk.Toplevel(self.root)
+        guide.title("Calibration guide — seven clicks")
+        guide.transient(self.root)
+        guide.resizable(False, False)
+        guide.geometry("660x530")
+        guide.grab_set()
+        frame = ttk.Frame(guide, padding=20)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="How to calibrate a transmission curve", font=("Helvetica", 16, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(frame, text="Open a chart and make seven clicks in this order. The first four clicks MUST match the reference values entered in the fields above the image.", wraplength=605).pack(anchor="w", pady=(0, 12))
+        sections = [
+            ("1–2  Calibrate wavelength (X axis)", "Click 1 on the tick matching X reference 1 (nm), then click 2 on the tick matching X reference 2 (nm). Example: if the fields say 400 and 700, click the 400 nm and 700 nm ticks, respectively."),
+            ("3–4  Calibrate transmission (Y axis)", "Click 3 on the tick matching Y reference 1 (%), then click 4 on the tick matching Y reference 2 (%). Example: if the fields say 0 and 100, click the 0% and 100% ticks, respectively."),
+            ("5–6  Set extraction boundaries", "Click the LEFT and RIGHT edges of the plotted region to extract. These edges do NOT have to coincide with the wavelength reference ticks from clicks 1 and 2."),
+            ("7  Select the curve", "Click a clearly coloured part of the transmission curve, avoiding grid lines and other curves."),
+        ]
+        for heading, description in sections:
+            ttk.Label(frame, text=heading, font=("Helvetica", 11, "bold")).pack(anchor="w", pady=(6, 2))
+            ttk.Label(frame, text=description, wraplength=605, justify="left").pack(anchor="w")
+        ttk.Label(frame, text="After clicking: select Extract curve and verify that the green overlay follows the intended curve.", wraplength=605).pack(anchor="w", pady=(12, 8))
+        hide_var = tk.BooleanVar(value=bool(self.settings.get("hide_calibration_guide", False)))
+        ttk.Checkbutton(frame, text="Do not show this guide at startup", variable=hide_var).pack(anchor="w")
+        def close_guide():
+            self.settings["hide_calibration_guide"] = bool(hide_var.get())
+            save_settings(self.settings)
+            guide.destroy()
+        ttk.Button(frame, text="Start", command=close_guide).pack(anchor="e", pady=(8, 0))
+        guide.protocol("WM_DELETE_WINDOW", close_guide)
+
+    def _check_updates_on_start(self):
+        if not self.settings.get("auto_check_updates", True):
+            return
+        last = self.settings.get("last_update_check", 0)
+        if isinstance(last, (int, float)) and time.time() - last < 24 * 3600:
+            return
+        self.check_for_updates(manual=False)
+
+    def check_for_updates(self, manual=False):
+        if self.update_running:
+            if manual:
+                messagebox.showinfo("Updates", "An update check is already running.")
+            return
+        self.update_running = True
+        self.settings["last_update_check"] = time.time()
+        save_settings(self.settings)
+        def worker():
+            try:
+                request = urllib.request.Request(
+                    LATEST_RELEASE_API,
+                    headers={"User-Agent": "Filter-Curve-Digitizer/" + APP_VERSION, "Accept": "application/vnd.github+json"},
+                )
+                with urllib.request.urlopen(request, timeout=6, context=github_ssl_context()) as response:
+                    release = json.loads(response.read(128 * 1024).decode("utf-8"))
+                if not isinstance(release, dict) or not isinstance(release.get("tag_name"), str):
+                    raise ValueError("Unexpected GitHub response.")
+                self.update_queue.put(("success", release))
+            except urllib.error.HTTPError as exc:
+                if exc.code == 404:
+                    self.update_queue.put(("no_stable_release", None))
+                else:
+                    self.update_queue.put(("error", str(exc)))
+            except Exception as exc:
+                self.update_queue.put(("error", str(exc)))
+        threading.Thread(target=worker, daemon=True).start()
+        self.root.after(100, lambda: self._finish_update_check(manual))
+
+    def _finish_update_check(self, manual):
+        try:
+            status, data = self.update_queue.get_nowait()
+        except queue.Empty:
+            self.root.after(100, lambda: self._finish_update_check(manual))
+            return
+        self.update_running = False
+        if status == "no_stable_release":
+            if manual:
+                messagebox.showinfo("Updates", "No stable release is published on GitHub yet. You are using v" + APP_VERSION + ".")
+            return
+        if status == "error":
+            if manual:
+                messagebox.showwarning("Updates", f"Unable to check GitHub releases:\n{data}")
+            return
+        tag = data.get("tag_name", "") if isinstance(data, dict) else ""
+        latest, current = parse_version(tag), parse_version(APP_VERSION)
+        if latest is None or current is None:
+            if manual:
+                messagebox.showwarning("Updates", "The latest GitHub release has an unrecognised version tag.")
+            return
+        if latest > current:
+            key = platform_asset_key()
+            asset = select_release_asset(data, key)
+            if asset is None:
+                if messagebox.askyesno(
+                    "New version available",
+                    f"Filter Curve Digitizer {tag} is available.\n"
+                    "No compatible download was found for this computer.\n\n"
+                    "Open GitHub Releases to choose a file manually?"
+                ):
+                    webbrowser.open(RELEASES_URL)
+            elif messagebox.askyesno(
+                "New version available",
+                f"Filter Curve Digitizer {tag} is available.\n"
+                f"Installed version: {APP_VERSION}.\n\n"
+                f"Download {asset['name']} to your Downloads folder?\n"
+                "The app will not install or run the downloaded file."
+            ):
+                self.download_update(asset)
+        elif manual:
+            messagebox.showinfo("Updates", f"You are using v{APP_VERSION}. No newer stable release is available.")
+
+    def download_update(self, asset):
+        """Download in a worker; Tk widgets are only updated from the main thread."""
+        if self.download_running:
+            messagebox.showinfo("Update download", "A download is already running.")
+            return
+        self.download_running = True
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Downloading Filter Curve Digitizer")
+        dialog.transient(self.root)
+        dialog.resizable(False, False)
+        dialog.geometry("490x150")
+        box = ttk.Frame(dialog, padding=16)
+        box.pack(fill="both", expand=True)
+        label = tk.StringVar(value="Connecting to GitHub…")
+        ttk.Label(box, textvariable=label, wraplength=455).pack(anchor="w", pady=(0, 12))
+        bar = ttk.Progressbar(box, mode="indeterminate", length=455)
+        bar.pack(fill="x")
+        bar.start(12)
+        # Prevent closing a running transfer; keep UI interactive and avoid Tk access from workers.
+        dialog.protocol("WM_DELETE_WINDOW", lambda: None)
+        events = queue.Queue()
+        def progress(done, total):
+            events.put(("progress", done, total))
+        def worker():
+            try:
+                path = download_release_asset(asset, downloads_directory(), progress=progress)
+                events.put(("done", str(path)))
+            except Exception as exc:
+                events.put(("error", str(exc)))
+        threading.Thread(target=worker, daemon=True).start()
+        def poll():
+            finished = None
+            try:
+                while True:
+                    event = events.get_nowait()
+                    if event[0] == "progress":
+                        _, done, total = event
+                        if total > 0:
+                            if str(bar.cget("mode")) != "determinate":
+                                bar.stop()
+                                bar.configure(mode="determinate", maximum=100)
+                            bar["value"] = min(100, round(100 * done / total))
+                            label.set(f"Downloaded {done / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MB")
+                        else:
+                            label.set(f"Downloaded {done / (1024 * 1024):.1f} MB")
+                    else:
+                        finished = event
+            except queue.Empty:
+                pass
+            if finished is None:
+                self.root.after(120, poll)
+                return
+            self.download_running = False
+            bar.stop()
+            dialog.destroy()
+            if finished[0] == "error":
+                messagebox.showerror("Update download", "Download failed: " + finished[1])
+            else:
+                path = Path(finished[1])
+                if messagebox.askyesno(
+                    "Download complete",
+                    f"Saved to:\n{path}\n\n"
+                    "Open the Downloads folder?\n"
+                    "You will need to install the update manually."
+                ):
+                    self.open_download_folder(path.parent)
+        self.root.after(120, poll)
+
+    @staticmethod
+    def open_download_folder(folder):
+        """Reveal the folder without launching the downloaded executable."""
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", str(folder)])
+        elif sys.platform.startswith("win"):
+            os.startfile(str(folder))
+        else:
+            subprocess.Popen(["xdg-open", str(folder)])
+
     @staticmethod
     def field(parent,name,var,width):
         ttk.Label(parent,text=name).pack(side='left',padx=(0,3))
@@ -79,7 +406,7 @@ class Digitizer:
         self.reset()
     def reset(self):
         self.points={};self.step_idx=0;self.output=None;self.overlay=None
-        self.info.set(self.STEPS[0][1] if self.image else 'Open an image.')
+        self._update_step_prompt()
         self.status.set('IMPORTANT: X reference values identify axis tick marks, not export limits. Set the visible plot boundaries in clicks 5 and 6.')
         self.update_canvas()
     def update_canvas(self):
@@ -111,7 +438,7 @@ class Digitizer:
             self.sample_color=patch[k]
             self.status.set(f'Selected curve color: RGB {tuple(int(v) for v in self.sample_color)}. Click Extract curve.')
         self.points[key]=(x,y);self.step_idx+=1
-        self.info.set(self.STEPS[self.step_idx][1] if self.step_idx<len(self.STEPS) else 'Calibration complete. Extract the curve and CHECK the green overlay.')
+        self._update_step_prompt()
         self.update_canvas()
     @staticmethod
     def coordinates(x_ref0,x_ref1,px0,px1,left,right,step):
@@ -237,6 +564,9 @@ class Digitizer:
         if path:self.overlay.save(path)
 
 def main():
+    if "--check-ssl" in sys.argv[1:]:
+        test_github_https()
+        return
     root=tk.Tk()
     try:ttk.Style().theme_use('clam')
     except tk.TclError:pass
