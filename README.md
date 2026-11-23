@@ -1,5 +1,9 @@
 # Filter Curve Digitizer
 
+> **Python v1.4.0:** [Download the complete source ZIP](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip) · [Installation instructions: Windows, macOS and Linux](#run-from-python-source-windows-macos-or-linux)
+>
+> **Versión Python v1.4.0:** [Descargar el código completo en ZIP](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip) · [Instrucciones de instalación en español](#español-descargar-e-instalar-la-versión-python)
+
 **Version 1.4.0 · Windows x64, macOS Intel / Apple Silicon, Linux x86_64 AppImage · Python source**
 
 Digitize colour-coded filter transmission curves from manufacturers' charts, then export wavelength and transmission data for PixInsight FilterManager or Siril SPCC.
@@ -27,6 +31,8 @@ Developed by **Carlos Rincón**. Inspired by the filter digitization workflow sh
 
 - [Security notice](#security-notice)
 - [Download and installation](#download-and-installation)
+- [Python source: download and setup](#run-from-python-source-windows-macos-or-linux)
+- [Python: instrucciones en español](#español-descargar-e-instalar-la-versión-python)
 - [Quick start: the seven clicks](#quick-start-the-seven-clicks)
 - [Understanding calibration](#understanding-calibration)
 - [Controls and prompts](#controls-and-prompts)
@@ -49,6 +55,7 @@ Download the appropriate asset from [GitHub Releases](https://github.com/crincon
 | macOS Intel | `Filter-Curve-Digitizer-v1.4-macOS-Intel.zip` |
 | macOS Apple Silicon / M-series | `Filter-Curve-Digitizer-v1.4-macOS-Apple-Silicon.zip` |
 | Linux x86_64 (beta) | `Filter-Curve-Digitizer-v1.4-Linux-x86_64.AppImage` |
+| Python source (Windows / macOS / Linux) | [Complete v1.4.0 source ZIP](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip) · [Setup instructions](#run-from-python-source-windows-macos-or-linux) |
 
 **Windows:** Download the EXE and open it. The application is unsigned: review the Security notice before proceeding past any publisher warning.
 
@@ -101,7 +108,9 @@ The Tkinter check opens a small test window; close it before launching the digit
 
 The Python source has the same optional GitHub version checks and user-initiated update downloads as the desktop application. See [Version checks and update downloads](#version-checks-and-update-downloads). Dependencies in this release are not version-pinned; a later installation may resolve different dependency versions.
 
-**Español — Ejecutar desde Python:** Descarga el [ZIP completo de v1.4.0](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip), extráelo y abre una terminal dentro de `filter-curve-digitizer-1.4.0`. Conserva juntos el archivo principal, `update_download.py` y `requirements.txt`. Necesitas **Python 3.12 con Tkinter**. Ejecuta, en orden, los cuatro comandos de tu sistema indicados arriba: crean un entorno separado, instalan NumPy, Pillow y certifi, comprueban Tkinter y abren la aplicación. Cierra la ventana de prueba de Tkinter antes del último comando. No hace falta activar el entorno. Si falta Tkinter, instálalo mediante tu distribución de Python o el gestor de paquetes del sistema, no con pip. La alternativa Python evita el empaquetado del EXE, pero no garantiza por sí sola que el programa sea seguro. Microsoft ha retirado su detección del EXE; las revisiones de otros fabricantes siguen pendientes.
+#### Español: descargar e instalar la versión Python
+
+ Descarga el [ZIP completo de v1.4.0](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip), extráelo y abre una terminal dentro de `filter-curve-digitizer-1.4.0`. Conserva juntos el archivo principal, `update_download.py` y `requirements.txt`. Necesitas **Python 3.12 con Tkinter**. Ejecuta, en orden, los cuatro comandos de tu sistema indicados arriba: crean un entorno separado, instalan NumPy, Pillow y certifi, comprueban Tkinter y abren la aplicación. Cierra la ventana de prueba de Tkinter antes del último comando. No hace falta activar el entorno. Si falta Tkinter, instálalo mediante tu distribución de Python o el gestor de paquetes del sistema, no con pip. La alternativa Python evita el empaquetado del EXE, pero no garantiza por sí sola que el programa sea seguro. Microsoft ha retirado su detección del EXE; las revisiones de otros fabricantes siguen pendientes.
 
 Supported input file types: PNG, JPEG, WEBP, BMP, and TIFF.
 
