@@ -71,14 +71,37 @@ When a newer stable version has a matching release asset for your system, the ap
 
 ### Run from Python source (Windows, macOS or Linux)
 
-Requirements: Python with a working **Tkinter** installation, **NumPy**, and **Pillow**.
+**[Download the complete Python source for v1.4.0 (ZIP)](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip)** · [Browse this release's source](https://github.com/crinconlab/filter-curve-digitizer/tree/v1.4.0)
 
-```bash
-python3 -m pip install -r requirements.txt
-python3 Filter_Curve_Digitizer.py
+This download is the complete project at the published **v1.4.0** tag, rather than the changing development branch. Extract the ZIP and open a terminal in the extracted `filter-curve-digitizer-1.4.0` folder. Keep `Filter_Curve_Digitizer.py`, `update_download.py` and `requirements.txt` together; downloading only the main `.py` file is not enough.
+
+Use **Python 3.12 with Tkinter**, the Python version used for the release builds. The dependencies are **NumPy, Pillow and certifi**, installed from the included `requirements.txt`. An internet connection is needed to install them. The commands below create a separate environment for this project and do not require activating it.
+
+**Windows — Command Prompt or PowerShell:**
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m tkinter
+.venv\Scripts\python.exe Filter_Curve_Digitizer.py
 ```
 
-On Windows, use `py` or `python` in place of `python3` if appropriate. On macOS, some system Python builds include an old or unsuitable Tkinter; use a Python installation with working Tk support. A separate standalone Intel macOS `.app` is available as a private GitHub Actions artifact.
+**macOS or Linux — Terminal:**
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m tkinter
+.venv/bin/python Filter_Curve_Digitizer.py
+```
+
+The Tkinter check opens a small test window; close it before launching the digitizer. If `py -3.12` or `python3.12` is not found, install Python 3.12 first. Tkinter is provided by the Python installation or your operating system's package manager, not by pip. On Linux, the matching Tkinter and venv packages may need to be installed separately. On macOS, use a Python installation with working Tk support.
+
+**Windows antivirus review (23 November 2026):** Some engines still flag the v1.4 Windows EXE. Microsoft has reviewed that exact executable (SHA-256 `80d87fca701f50c53dcbe9245ffeda7a35538dc255995df14ab06a2f70dd8e64`), classified it as **Not malware** and removed its detection; other vendor reviews remain pending. Running from Python avoids the compiled one-file EXE packaging, but is **not a guarantee of safety** or a reason to bypass security warnings.
+
+The Python source has the same optional GitHub version checks and user-initiated update downloads as the desktop application. See [Version checks and update downloads](#version-checks-and-update-downloads). Dependencies in this release are not version-pinned; a later installation may resolve different dependency versions.
+
+**Español — Ejecutar desde Python:** Descarga el [ZIP completo de v1.4.0](https://github.com/crinconlab/filter-curve-digitizer/archive/refs/tags/v1.4.0.zip), extráelo y abre una terminal dentro de `filter-curve-digitizer-1.4.0`. Conserva juntos el archivo principal, `update_download.py` y `requirements.txt`. Necesitas **Python 3.12 con Tkinter**. Ejecuta, en orden, los cuatro comandos de tu sistema indicados arriba: crean un entorno separado, instalan NumPy, Pillow y certifi, comprueban Tkinter y abren la aplicación. Cierra la ventana de prueba de Tkinter antes del último comando. No hace falta activar el entorno. Si falta Tkinter, instálalo mediante tu distribución de Python o el gestor de paquetes del sistema, no con pip. La alternativa Python evita el empaquetado del EXE, pero no garantiza por sí sola que el programa sea seguro. Microsoft ha retirado su detección del EXE; las revisiones de otros fabricantes siguen pendientes.
 
 Supported input file types: PNG, JPEG, WEBP, BMP, and TIFF.
 
