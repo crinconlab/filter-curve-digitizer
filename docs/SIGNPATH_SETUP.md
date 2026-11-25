@@ -1,8 +1,16 @@
-# SignPath setup — pending admission
+# SignPath setup — archived, inactive
 
 This preparation does not sign an existing release, submit an admission form, create a paid plan, or publish a new binary. There is no production signing credential configured by these files.
 
-## Admission
+## Closed application — 25 November 2026
+
+SignPath Foundation declined the application because the project does not yet meet its public visibility, community adoption and sustained activity requirements. The response explicitly states that this is not a judgment on project quality or potential.
+
+The maintainer has closed this route for now and will not pursue a paid subscription. No signed candidate has been produced or published. Keep the optional integration disabled; do not set `SIGNPATH_ENABLED=true`, configure credentials or request signing under the current decision.
+
+The following checklist is retained only as technical reference for a possible future reconsideration. It is not an active task list or a pending admission. Reopening requires a new maintainer decision and provider approval.
+
+## Historical admission preparation
 
 Apply only for the free SignPath Foundation program. Project: Filter Curve Digitizer. Maintainer: Carlos Rincón (crinconlab), PixInsight CPD; the maintainer can provide the accreditation email privately if requested. CPD is not a certification of this application.
 
@@ -14,7 +22,7 @@ Public links:
 - Privacy: https://github.com/crinconlab/filter-curve-digitizer/blob/main/docs/PRIVACY.md
 - Releases: https://github.com/crinconlab/filter-curve-digitizer/releases/tag/v1.4.0
 
-## After approval
+## Reference only: setup after any future approval
 
 1. Enable MFA in SignPath. Confirm the GitHub App permissions and scope it to this repository only.
 2. Have SignPath configure verified GitHub build provenance for this repository and the `windows-signpath-candidate.yml` workflow.
@@ -41,7 +49,7 @@ The signature changes SHA-256. Preserve the original v1.4 EXE and existing revie
 
 See [UNINSTALL.md](UNINSTALL.md).
 
-## Validation still required
+## Unperformed validation (inactive)
 
 - Admission and production account setup.
 - SignPath schema/import validation of the XML configuration.
