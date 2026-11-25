@@ -12,7 +12,7 @@ The application exports CSV definitions for **PixInsight FilterManager** and JSO
 
 Developed by **Carlos Rincón**, a PixInsight CPD. Filter Curve Digitizer is an independent application; CPD status is background about its developer, not PixInsight certification or endorsement of this program. Inspired by the filter digitization workflow shared by Sweetman Astrophotography.
 
-**[Code signing policy](docs/CODE_SIGNING.md)** · [Privacy policy](docs/PRIVACY.md) · [Removal instructions](docs/UNINSTALL.md). SignPath Foundation integration is being prepared; admission and production signing are pending. Existing releases remain unsigned.
+**[Code signing policy](docs/CODE_SIGNING.md)** · [Privacy policy](docs/PRIVACY.md) · [Removal instructions](docs/UNINSTALL.md). The free SignPath Foundation application was declined on 25 November 2026 because the project does not yet meet the program's public visibility and track-record requirements. This signing route is closed for now; no paid signing plan will be pursued. Existing releases remain unsigned and the optional signing integration remains disabled.
 
 > **Status:** The Windows executable and CSV/JSON file generation have been tested with an Astronomik CLS transmission chart. The Siril JSON has **not yet been verified by importing it into Siril**. This is a digitization utility, not a spectrophotometer; extracted values are approximations of the source graphic.
 
