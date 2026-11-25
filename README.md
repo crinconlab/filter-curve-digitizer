@@ -10,7 +10,9 @@ Digitize colour-coded filter transmission curves from manufacturers' charts, the
 
 The application exports CSV definitions for **PixInsight FilterManager** and JSON definitions intended for **Siril's SPCC filter database**.
 
-Developed by **Carlos Rincón**. Inspired by the filter digitization workflow shared by Sweetman Astrophotography.
+Developed by **Carlos Rincón**, a PixInsight CPD. Filter Curve Digitizer is an independent application; CPD status is background about its developer, not PixInsight certification or endorsement of this program. Inspired by the filter digitization workflow shared by Sweetman Astrophotography.
+
+**[Code signing policy](docs/CODE_SIGNING.md)** · [Privacy policy](docs/PRIVACY.md) · [Removal instructions](docs/UNINSTALL.md). SignPath Foundation integration is being prepared; admission and production signing are pending. Existing releases remain unsigned.
 
 > **Status:** The Windows executable and CSV/JSON file generation have been tested with an Astronomik CLS transmission chart. The Siril JSON has **not yet been verified by importing it into Siril**. This is a digitization utility, not a spectrophotometer; extracted values are approximations of the source graphic.
 
