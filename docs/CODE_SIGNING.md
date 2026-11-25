@@ -2,9 +2,11 @@
 
 ## Current status
 
-SignPath Foundation integration is being prepared. Admission, account setup and production signing are **pending**. Existing releases are unsigned. No claim of SignPath approval or sponsorship is made at this stage.
+The free SignPath Foundation application was declined on **25 November 2026** because the project does not yet show the public visibility, community adoption and sustained track record required by the program. SignPath explicitly stated that this was not a judgment on the project's quality or potential.
 
-If the application is accepted and production signing is enabled, the attribution will be: **Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).**
+This signing route is **closed for now**. No paid signing plan will be pursued. Existing releases remain unsigned; no signed candidate has been produced or published. The optional integration remains disabled and must not be enabled under the current decision. There is no SignPath approval, certificate or sponsorship.
+
+The technical preparation is retained as inactive reference material, not as an active implementation plan. Any future reopening requires a new maintainer decision and a fresh eligibility review.
 
 ## Project and maintainer
 
@@ -14,12 +16,12 @@ Carlos Rincón holds PixInsight CPD status. Evidence is available from the maint
 
 - Authors/committers: Carlos Rincón (crinconlab).
 - Reviewer for external contributions: Carlos Rincón (crinconlab).
-- Signing approver: Carlos Rincón (crinconlab).
-- Contributors must use multi-factor authentication for GitHub and SignPath where applicable. The maintainer has confirmed GitHub MFA is enabled; SignPath MFA must be enabled during account setup.
+- Maintainer responsible for any future signing decision: Carlos Rincón (crinconlab).
+- Contributors must use multi-factor authentication for GitHub and SignPath where applicable. The maintainer has confirmed GitHub MFA is enabled; SignPath setup is not being pursued.
 
-## Scope and approval
+## Requirements if signing is reconsidered
 
-Only this project's Windows executable, built from its public source by the dedicated GitHub Actions workflow, may be submitted for signing. Third-party libraries must not be signed as if authored by this project.
+If signing is reopened and approved in the future, only this project's Windows executable, built from its public source by the dedicated GitHub Actions workflow, may be submitted for signing. Third-party libraries must not be signed as if authored by this project.
 
 The workflow is manually dispatched from main. Signing is disabled by default and additionally requires explicit configuration and credentials. Each signing request must require manual approval in SignPath. No signing request or GitHub artifact automatically publishes a Release or changes the website.
 
