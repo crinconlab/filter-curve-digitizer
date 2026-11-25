@@ -34,3 +34,7 @@ A separate Linux `.sha256` file is provided for manual verification.
 - Updates are offered only for stable GitHub Releases, not pre-releases.
 
 Developer: Carlos Rincón. Source repository: https://github.com/crinconlab/filter-curve-digitizer
+
+## Code signing policy
+
+The v1.4.0 release remains unsigned. SignPath Foundation integration is being prepared; admission and production signing are pending. See the current [Code signing policy](https://github.com/crinconlab/filter-curve-digitizer/blob/main/docs/CODE_SIGNING.md), [privacy policy](https://github.com/crinconlab/filter-curve-digitizer/blob/main/docs/PRIVACY.md) and [setup checklist](https://github.com/crinconlab/filter-curve-digitizer/blob/main/docs/SIGNPATH_SETUP.md). Signed candidates will be reviewed separately before any new release is published.
