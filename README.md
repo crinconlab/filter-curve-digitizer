@@ -265,6 +265,13 @@ Click a saturated portion of the correct line. Lower **Color tolerance**, avoid 
 **Not enough curve pixels detected.**  
 Confirm the seventh click selected a visibly colored line. Increase tolerance moderately or try a higher-resolution source image.
 
+**Black or white transmission curve — “No color detected”.**  
+The current color-based extraction algorithm cannot select achromatic (black, white or gray) curves reliably. Recolor the target curve using an image editor, choosing a saturated color not already used in the plot. Alternatively, upload the original chart to an AI image-editing tool and use this prompt (replace red with another unused color if necessary):
+
+> Recolor only the black or white spectral transmission curve in this graph to pure red (RGB 255, 0, 0). Preserve the exact shape, position, thickness and geometry of the original curve. Do not smooth, interpolate, redraw or modify it. Keep the original image dimensions, aspect ratio, axes, numerical labels, grid lines, wavelength range and transmission scale unchanged. Ensure that no other elements are changed to red. Remove interfering watermarks only if this can be done without altering the curve or calibration marks. The resulting image will be used for numerical spectral transmission curve digitization, so geometrical accuracy and fidelity to the original data are essential.
+
+AI image editing can alter curve geometry or axis labels even when explicitly instructed not to. Compare the edited image against the original before importing it; prefer direct pixel recoloring with an image editor if accuracy cannot be verified. Then calibrate the edited chart, select the recolored curve and inspect the green extraction overlay before exporting.
+
 **The image contains multiple similarly colored curves.**  
 The current algorithm selects pixels by color and cannot reliably distinguish overlapping curves of the same color. Crop, isolate or clean the target line before importing the image.
 
